@@ -9,6 +9,10 @@ public class SmartIndexer
         configuration = config;
     }
 
+    /// <summary>
+    /// Creates the indexer directory, used for storing record indexes of a group
+    /// </summary>
+    /// <typeparam name="T">The type of record being stored within this group, so that the appropriate index files can be created.</typeparam>
     public async Task BuildGroupIndexDirectoryFor<T>()
     {
         var template = typeof(T);
@@ -26,6 +30,10 @@ public class SmartIndexer
         }
     }
 
+    /// <summary>
+    /// Create index data for each of a record's properties, so that it can be searched for by property and located quickly.
+    /// </summary>
+    /// <param name="record">Record being indexed by smart indexer</param>
     public async Task AddToIndex(RecordStructure record)
     {
         var path = Path.Join(configuration.DataDirectory, record.GetType().Name, "si");
@@ -57,14 +65,20 @@ public class SmartIndexer
         }
     }
 
-    public async Task FindFromGroup<T>(string Value, string ByProperty)
+    /// <summary>
+    /// Gets the first record from a supplied query property and value being searched for.
+    /// </summary>
+    /// <param name="Value">Value of the property being searched for.</param>
+    /// <param name="ByProperty">Name of property in record that we are searching for.</param>
+    /// <typeparam name="T">Type of record we are searching for (must be used in order to index without slowly iterating through each existing group).</typeparam>
+    public async Task FindRecord<T>(string Value, string ByProperty) where T : notnull
     {
         
     }
 
     public async Task RemoveFromIndex<T>()
     {
-        
+        //To-do
     }
 
     public async Task RegenerateAllIndexes<T>()
