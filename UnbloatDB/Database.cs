@@ -1,4 +1,7 @@
 using System.Reflection;
+using System.Text.Json;
+using Microsoft.VisualBasic.CompilerServices;
+using UnbloatDB.Serialisers;
 
 namespace UnbloatDB;
 
@@ -10,9 +13,9 @@ public class Database
 
     public Database(Config config)
     {
+        configuration = config;
         indexerCache = new Dictionary<string, string>();
         indexer = new SmartIndexer(configuration);
-        configuration = config;
     }
 
     public async Task CreateRecord<T> (T record) where T : notnull
@@ -34,6 +37,21 @@ public class Database
         await indexer.AddToIndex(structuredRecord);
     }
 
+    public async Task<T?> GetRecord<T>(string masterKey) where T : notnull
+    {
+        var group = typeof(T).Name;
+        var path = Path.Join(configuration.DataDirectory, group, masterKey);
+
+        if (!File.Exists(path))
+        {
+            return default;
+        }
+
+        await using var openStream = File.OpenRead(path);
+        var record = await configuration.FileFormat.Deserialise<T>(openStream);
+        return record;
+    }
+
     public async Task DeleteRecord<T> (string masterKey, bool deleteRefrences = false)
     {
         var group = typeof(T).Name;
@@ -43,15 +61,5 @@ public class Database
         {
             File.Delete(recordPath);
         }
-    }
-
-    public async Task GetRecord<T>(string masterKey)
-    {
-        
-    }
-
-    public bool GroupExists(string name)
-    {
-        return File.Exists(Path.Join(configuration.DataDirectory, name));
     }
 }

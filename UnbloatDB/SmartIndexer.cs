@@ -1,6 +1,6 @@
 ﻿namespace UnbloatDB;
 
-public class SmartIndexer
+internal sealed class SmartIndexer
 {
     private readonly Config configuration;
     
