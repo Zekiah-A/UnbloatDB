@@ -36,52 +36,53 @@ internal sealed class SmartIndexer
     /// <param name="record">Record being indexed by smart indexer</param>
     public async Task AddToIndex(RecordStructure record)
     {
-        var path = Path.Join(configuration.DataDirectory, record.GetType().Name, "si");
+        var group = nameof(record.Data);
+        var path = Path.Join(configuration.DataDirectory, group, "si");
+
+        if (!Directory.Exists(path))
+        {
+            // If there is no indexer directory for this group, then regenerate all indexes for this group.
+        }
         
         foreach (var property in record.Data.GetType().GetProperties())
         {
-            var indexFile = await File.ReadAllLinesAsync(Path.Join(path, property.Name));
+            var indexPath = Path.Join(path, property.Name);
+
+            if (!File.Exists(indexPath))
+            {
+                // If there is no indexer for this specific property, then regenerate indexes for just this property.
+            }
+              
+            var indexFile = await File.ReadAllLinesAsync(indexPath);
             var index = indexFile
                 .Select(line => line.Split(" "))
                 .Where(keyVal => keyVal.Length == 2)
                 .ToList();
 
-            var stringsEnumerable = index.ToList();
-            var values = stringsEnumerable.Select(keyValue => keyValue[0]) as string[];
+            var values = index.Select(keyValue => keyValue[0]) as string[];
 
             // Figure out where to put in index, so we do not need to sort later by first binary searching for same value,
             // and appending after, if not alr in the array, we analyse where it should go.
             var foundIndex = Array.BinarySearch(values, property.GetValue(record));
-            
+
             if (foundIndex != -1)
             {
-                stringsEnumerable.Insert(foundIndex, property.GetValue(record) as string[]);
+                index.Insert(foundIndex, property.GetValue(record) as string[]);
             }
             else
             {
                 
-            }            
+            }
             
         }
     }
-
-    /// <summary>
-    /// Gets the first record from a supplied query property and value being searched for.
-    /// </summary>
-    /// <param name="Value">Value of the property being searched for.</param>
-    /// <param name="ByProperty">Name of property in record that we are searching for.</param>
-    /// <typeparam name="T">Type of record we are searching for (must be used in order to index without slowly iterating through each existing group).</typeparam>
-    public async Task FindRecord<T>(string Value, string ByProperty) where T : notnull
-    {
-        
-    }
-
+    
     public async Task RemoveFromIndex<T>()
     {
         //To-do
     }
 
-    public async Task RegenerateAllIndexes<T>()
+    public async Task RegenerateAllIndexes()
     {
         //To-do
     }
