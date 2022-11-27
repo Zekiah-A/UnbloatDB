@@ -68,21 +68,29 @@ internal sealed class SmartIndexer
 
             if (foundIndex != -1)
             {
-                index.Insert(foundIndex - 1,new[] { propertyValue as string, record.MasterKey }); //why am I trying to cast value to a stirng[]?
+                index.Insert(foundIndex - 1,new[] { propertyValue as string, record.MasterKey });
                 continue;
             }
 
             // If we could not binary search in the index for another key with the same value we can place this before,
             // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
-            for (var i = 0; i < values.Length; i++)
+            if (values.Length > 0)
             {
-                if (values[i].CompareTo(propertyValue) == -1)
+                for (var i = 0; i < values.Length; i++)
                 {
-                    continue;
+                    if (values[i].CompareTo(propertyValue) == -1)
+                    {
+                        continue;
+                    }
+                    
+                    index.Insert(i - 1,new[] { propertyValue as string, record.MasterKey });
                 }
                 
-                index.Insert(i - 1,new[] { propertyValue as string, record.MasterKey });
+                continue;
             }
+            
+            // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
+            index.Add(new[] { propertyValue as string, record.MasterKey });
         }
     }
     
