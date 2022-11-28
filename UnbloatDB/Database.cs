@@ -5,9 +5,8 @@ using UnbloatDB.Serialisers;
 
 namespace UnbloatDB;
 
-public class Database
+public sealed class Database
 {
-    private readonly Dictionary<string, string> indexerCache;
     private readonly Config configuration;
     private readonly SmartIndexer indexer;
 

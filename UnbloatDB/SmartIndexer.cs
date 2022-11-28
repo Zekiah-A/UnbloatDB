@@ -5,10 +5,12 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
+    private readonly Dictionary<string, IEneumerable<string>> indexerCache;
     
     public SmartIndexer(Config config)
     {
         configuration = config;
+        indexerCache = new Dictionary<string, IEneumerable<string>>();
     }
 
     /// <summary>
@@ -100,6 +102,9 @@ internal sealed class SmartIndexer
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
             index.Add(new[] { propertyValue as string, record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+
+            // Cache this index file to make subsequent loads faster
+            indexerCache.Add(indexPath, index);
         }
     }
     

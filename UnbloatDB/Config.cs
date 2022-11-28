@@ -2,4 +2,4 @@ using UnbloatDB.Serialisers;
 
 namespace UnbloatDB;
 
-public record Config(string DataDirectory, SerialiserBase FileFormat);
+public sealed record Config(string DataDirectory, SerialiserBase FileFormat);
