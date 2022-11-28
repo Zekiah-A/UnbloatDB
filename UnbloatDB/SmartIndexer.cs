@@ -1,4 +1,6 @@
-﻿namespace UnbloatDB;
+﻿using System.Text;
+
+namespace UnbloatDB;
 
 internal sealed class SmartIndexer
 {
@@ -91,6 +93,8 @@ internal sealed class SmartIndexer
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
             index.Add(new[] { propertyValue as string, record.MasterKey });
+            
+            await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
         }
     }
     
