@@ -64,37 +64,41 @@ internal sealed class SmartIndexer
             var values = index.Select(keyValue => keyValue[0]) as string[];
             var propertyValue = property.GetValue(record);
 
-            if (values is not null)
-            {
-                // Figure out where to put in index, so we do not need to sort later by first binary searching for
-                // same value, and appending after, if not alr in the array, we analyse where it should go.
-                var foundIndex = Array.BinarySearch(values, propertyValue);
+            // Figure out where to put in index, so we do not need to sort later by first binary searching for
+            // same value, and appending after, if not alr in the array, we analyse where it should go.
+            var foundIndex = Array.BinarySearch(values, propertyValue);
 
-                if (foundIndex != -1)
-                {
-                    index.Insert(foundIndex - 1, new[] {propertyValue as string, record.MasterKey});
-                }
-            }
-            else if (values?.Length > 0)
+            if (foundIndex != -1)
             {
-                // If we could not binary search in the index for another key with the same value we can place this before,
-                // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
+                index.Insert(foundIndex - 1, new[] { propertyValue as string, record.MasterKey });
+                await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+                continue;
+            }
+
+            // If we could not binary search in the index for another key with the same value we can place this before,
+            // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
+            if (values.Length > 0)
+            {
+                var foundAny = false;
+
                 for (var i = 0; i < values.Length; i++)
                 {
-                    if (values[i].CompareTo(propertyValue) == -1)
-                    {
-                        continue;
-                    }
+                    if (values[i].CompareTo(propertyValue) == -1) continue;
                     
-                    index.Insert(i - 1,new[] { propertyValue as string, record.MasterKey });
+                    index.Insert(i - 1, new[] { propertyValue as string, record.MasterKey });
+                    foundAny = true;
+                }
+
+                if (foundAny)
+                {
+                    await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+                    continue;
                 }
             }
-            else
-            {
-                // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-                index.Add(new[] { propertyValue as string, record.MasterKey });
-            }
+
             
+            // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
+            index.Add(new[] { propertyValue as string, record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
         }
     }
