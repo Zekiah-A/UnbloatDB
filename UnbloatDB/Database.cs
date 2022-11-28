@@ -18,11 +18,16 @@ public class Database
         indexer = new SmartIndexer(configuration);
     }
 
-    public async Task CreateRecord<T> (T record) where T : notnull
+    /// <summary>
+    /// Creates a new record in the database from supplied data
+    /// </summary>
+    /// <param name="data">The data of the record we are creating (assigned a master key, converted into record structure by DB).</param>
+    /// <typeparam name="T">The data type of the record we are creating.</typeparam>
+    public async Task CreateRecord<T> (T data) where T : notnull
     {
         var group = nameof(T);
         var masterKey = new Guid().ToString();
-        var structuredRecord = new RecordStructure(masterKey, record);
+        var structuredRecord = new RecordStructure(masterKey, data);
         var groupPath = Path.Join(configuration.DataDirectory, group);
 
         if (!Directory.Exists(groupPath))
@@ -37,6 +42,12 @@ public class Database
         await indexer.AddToIndex(structuredRecord);
     }
 
+    /// <summary>
+    /// Gets the first record from a supplied query property and value being searched for.
+    /// </summary>
+    /// <param name="byProperty">Name of property in record that we are searching for.</param>
+    /// <param name="masterKey">Value of the property being searched for.</param>
+    /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
     public async Task<RecordStructure?> GetRecord<T>(string masterKey) where T : notnull
     {
         var group = nameof(T);
@@ -57,7 +68,7 @@ public class Database
     /// </summary>
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
-    /// <typeparam name="T">Type/group of record we are searching for</typeparam>
+    /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
     public async Task<RecordStructure[]> FindRecords<T>(string byProperty, string value) where T : notnull
     {
         var group = nameof(T);
@@ -96,9 +107,15 @@ public class Database
         return found.ToArray(); 
     }
 
-    public async Task DeleteRecord<T> (string masterKey, bool deleteRefrences = false)
+    /// <summary>
+    /// Deletes a specified record (via masterkey) from the database.
+    /// </summary>
+    /// <param name="masterKey">The masterkey of the record that is being deleted.</param>
+    /// <param name="deleteRefrences">Delete all references to this record by other records via intraKey.</param>
+    /// <typeparam name="T">The data type of the record that is being deleted.</typeparam>
+    public async Task DeleteRecord<T> (string masterKey, bool deleteRefrences = false) where T : notnull
     {
-        var group = typeof(T).Name;
+        var group = nameof(T);
         var recordPath = Path.Join(configuration.DataDirectory, group, masterKey);
         
         if (File.Exists(group))

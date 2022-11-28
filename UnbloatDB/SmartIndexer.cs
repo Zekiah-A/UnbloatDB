@@ -103,7 +103,7 @@ internal sealed class SmartIndexer
         }
     }
     
-    public async Task RemoveFromIndex<T>()
+    public async Task RemoveFromIndex<T>(string masterKey)
     {
         //To-do
     }
