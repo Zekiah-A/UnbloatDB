@@ -5,12 +5,12 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
-    private readonly Dictionary<string, IEneumerable<string>> indexerCache;
+    private readonly Dictionary<string, List<string[]>> indexerCache;
     
     public SmartIndexer(Config config)
     {
         configuration = config;
-        indexerCache = new Dictionary<string, IEneumerable<string>>();
+        indexerCache = new Dictionary<string, List<string[]>>();
     }
 
     /// <summary>

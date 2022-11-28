@@ -13,7 +13,6 @@ public sealed class Database
     public Database(Config config)
     {
         configuration = config;
-        indexerCache = new Dictionary<string, string>();
         indexer = new SmartIndexer(configuration);
     }
 
