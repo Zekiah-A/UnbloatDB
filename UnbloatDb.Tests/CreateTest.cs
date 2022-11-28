@@ -38,8 +38,8 @@ internal sealed class CreateTest
                 new DateTime().AddDays(Random.Next(0, 10000))
             );
 
-            Db.CreateRecord(artist);
-            Db.CreateRecord(song);
+            Db.CreateRecord<Artist>(artist);
+            Db.CreateRecord<Song>(song);
         }
         return true;
     }
