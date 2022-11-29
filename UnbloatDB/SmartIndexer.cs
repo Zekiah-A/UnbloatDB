@@ -17,7 +17,7 @@ internal sealed class SmartIndexer
     /// Creates the indexer directory, used for storing record indexes of a group
     /// </summary>
     /// <typeparam name="T">The type of record being stored within this group, so that the appropriate index files can be created.</typeparam>
-    public async Task BuildGroupIndexDirectoryFor<T>()
+    public void BuildGroupIndexDirectoryFor<T>()
     {
         var template = typeof(T);
         var path = Path.Join(configuration.DataDirectory, template.Name, "si");
@@ -29,8 +29,8 @@ internal sealed class SmartIndexer
         foreach (var property in template.GetProperties())
         {
             //TODO: Only index primitive types for now
-            if (!property.GetType().IsPrimitive) continue;
-            await File.WriteAllTextAsync(Path.Join(path, property.Name), "");
+            //if (!property.GetType().IsPrimitive) continue;
+            File.Create(Path.Join(path, property.Name));
         }
     }
 
@@ -40,7 +40,7 @@ internal sealed class SmartIndexer
     /// <param name="record">Record being indexed by smart indexer</param>
     public async Task AddToIndex(RecordStructure record)
     {
-        var group = nameof(record.Data);
+        var group = nameof(record.Data); //TODO: this is wrong, get original record name, not "Data"
         var path = Path.Join(configuration.DataDirectory, group, "si");
 
         if (!Directory.Exists(path))
