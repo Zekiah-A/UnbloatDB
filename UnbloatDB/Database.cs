@@ -25,7 +25,7 @@ public sealed class Database
     {
         var group = nameof(T);
         var masterKey = new Guid().ToString();
-        var structuredRecord = new RecordStructure(masterKey, data);
+        var structuredRecord = new RecordStructure<T>(masterKey, data);
         var groupPath = Path.Join(configuration.DataDirectory, group);
 
         if (!Directory.Exists(groupPath))
@@ -46,7 +46,7 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="masterKey">Value of the property being searched for.</param>
     /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure?> GetRecord<T>(string masterKey) where T : notnull
+    public async Task<RecordStructure<T>?> GetRecord<T>(string masterKey) where T : notnull
     {
         var group = nameof(T);
         var path = Path.Join(configuration.DataDirectory, group, masterKey);
@@ -57,7 +57,7 @@ public sealed class Database
         }
 
         await using var openStream = File.OpenRead(path);
-        var record = await configuration.FileFormat.Deserialise<RecordStructure>(openStream);
+        var record = await configuration.FileFormat.Deserialise<RecordStructure<T>>(openStream);
         return record;
     }
     
@@ -67,7 +67,7 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure[]> FindRecords<T>(string byProperty, string value) where T : notnull
+    public async Task<RecordStructure<T>[]> FindRecords<T>(string byProperty, string value) where T : notnull
     {
         var group = nameof(T);
         var path = Path.Join(configuration.DataDirectory, group, "si", byProperty);
@@ -88,7 +88,7 @@ public sealed class Database
         
         var keys = index.Select(keyValue => keyValue[1]) as string[];
         var values = index.Select(keyValue => keyValue[0]) as string[];
-        var found = new List<RecordStructure>();
+        var found = new List<RecordStructure<T>>();
 
         var position = Array.BinarySearch(values, value);
         while (position != -1)

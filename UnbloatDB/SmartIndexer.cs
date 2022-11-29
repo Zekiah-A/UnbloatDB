@@ -38,9 +38,9 @@ internal sealed class SmartIndexer
     /// Create index data for each of a record's properties, so that it can be searched for by property and located quickly.
     /// </summary>
     /// <param name="record">Record being indexed by smart indexer</param>
-    public async Task AddToIndex(RecordStructure record)
+    public async Task AddToIndex<T>(RecordStructure<T> record) where T : notnull
     {
-        var group = nameof(record.Data); //TODO: this is wrong, get original record name, not "Data"
+        var group = nameof(T);
         var path = Path.Join(configuration.DataDirectory, group, "si");
 
         if (!Directory.Exists(path))

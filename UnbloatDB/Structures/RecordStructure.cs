@@ -1,3 +1,3 @@
 namespace UnbloatDB;
 
-public sealed record RecordStructure(string MasterKey, object Data);
+public sealed record RecordStructure<T>(string MasterKey, T Data) where T : notnull;
