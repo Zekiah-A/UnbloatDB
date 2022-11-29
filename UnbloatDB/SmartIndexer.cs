@@ -40,7 +40,7 @@ internal sealed class SmartIndexer
     /// <param name="record">Record being indexed by smart indexer</param>
     public async Task AddToIndex<T>(RecordStructure<T> record) where T : notnull
     {
-        var group = nameof(T);
+        var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, "si");
 
         if (!Directory.Exists(path))
@@ -64,7 +64,7 @@ internal sealed class SmartIndexer
                 .ToList();
 
             var values = index.Select(keyValue => keyValue[0]) as string[];
-            var propertyValue = property.GetValue(record);
+            var propertyValue = property.GetValue(record);//object does not match target type
 
             // Figure out where to put in index, so we do not need to sort later by first binary searching for
             // same value, and appending after, if not alr in the array, we analyse where it should go.

@@ -24,7 +24,7 @@ public sealed class Database
     public async Task CreateRecord<T> (T data) where T : notnull
     {
         var group = nameof(T);
-        var masterKey = new Guid().ToString();
+        var masterKey = Guid.NewGuid().ToString();
         var structuredRecord = new RecordStructure<T>(masterKey, data);
         var groupPath = Path.Join(configuration.DataDirectory, group);
 

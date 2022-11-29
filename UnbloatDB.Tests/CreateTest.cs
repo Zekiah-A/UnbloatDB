@@ -23,7 +23,7 @@ internal sealed class CreateTest
         for (var i = 0; i < RecordCount; i++)
         {
             var guid = Guid.NewGuid();
-
+            
             var artist = new Artist
             (
                 Random.Next(0, 82),
