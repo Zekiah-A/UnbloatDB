@@ -78,7 +78,7 @@ internal sealed class SmartIndexer
             
             var values = index.Select(keyValue => keyValue[0]) as string[];
             var propertyValue = property.GetValue(record.Data);
-            
+
             if (values is { Length: > 0 })
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
@@ -113,7 +113,7 @@ internal sealed class SmartIndexer
 
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue as string, record.MasterKey });
+            index.Add(new[] { propertyValue.ToString(), record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
             // Cache this index file to make subsequent loads faster
             // indexerCache.Add(indexPath, index);
