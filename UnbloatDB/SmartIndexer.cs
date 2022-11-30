@@ -20,7 +20,7 @@ internal sealed class SmartIndexer
     public void BuildGroupIndexDirectoryFor<T>()
     {
         var template = typeof(T);
-        var path = Path.Join(configuration.DataDirectory, template.Name, "si");
+        var path = Path.Join(configuration.DataDirectory, template.Name, "0si");
         
         //Create index directory in template's group
         Directory.CreateDirectory(path);
@@ -41,7 +41,7 @@ internal sealed class SmartIndexer
     public async Task AddToIndex<T>(RecordStructure<T> record) where T : notnull
     {
         var group = typeof(T).Name;
-        var path = Path.Join(configuration.DataDirectory, group, "si");
+        var path = Path.Join(configuration.DataDirectory, group, "0si");
 
         if (!Directory.Exists(path))
         {

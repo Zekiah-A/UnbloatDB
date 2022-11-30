@@ -70,7 +70,7 @@ public sealed class Database
     public async Task<RecordStructure<T>[]> FindRecords<T>(string byProperty, string value) where T : notnull
     {
         var group = nameof(T);
-        var path = Path.Join(configuration.DataDirectory, group, "si", byProperty);
+        var path = Path.Join(configuration.DataDirectory, group, "0si", byProperty);
 
         if (!File.Exists(path))
         {
