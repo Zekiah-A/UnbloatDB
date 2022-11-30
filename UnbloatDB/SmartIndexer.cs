@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Immutable;
+using System.Text;
 using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
@@ -29,6 +30,7 @@ internal sealed class SmartIndexer
         foreach (var property in typeof(T).GetProperties())
         {
             //TODO: Make this only index primitive types for now
+            //TODO: Attribute not working
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
@@ -54,6 +56,7 @@ internal sealed class SmartIndexer
         
         foreach (var property in typeof(T).GetProperties())
         {
+            //TODO: Attribute not working
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
@@ -75,9 +78,9 @@ internal sealed class SmartIndexer
                 })
                 .Where(keyVal => keyVal is { Length: 2 })
                 .ToList();
-            
-            var values = index.Select(keyValue => keyValue[0]) as string[];
-            var propertyValue = property.GetValue(record.Data);
+
+            var values = index.Select(keyValue => keyValue![0]).ToImmutableArray();
+            var propertyValue = property.GetValue(record.Data)!; //TODO: Investigate course of action with null property values
 
             if (values is { Length: > 0 })
             {
