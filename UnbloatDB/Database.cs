@@ -23,7 +23,7 @@ public sealed class Database
     /// <typeparam name="T">The data type of the record we are creating.</typeparam>
     public async Task CreateRecord<T> (T data) where T : notnull
     {
-        var group = nameof(T);
+        var group = typeof(T).Name;
         var masterKey = Guid.NewGuid().ToString();
         var structuredRecord = new RecordStructure<T>(masterKey, data);
         var groupPath = Path.Join(configuration.DataDirectory, group);
@@ -35,7 +35,7 @@ public sealed class Database
         }
         
         var serialisedRecord = await configuration.FileFormat.Serialise(structuredRecord);
-        await File.WriteAllTextAsync(serialisedRecord, Path.Join(configuration.DataDirectory, group, masterKey));
+        await File.WriteAllTextAsync(Path.Join(configuration.DataDirectory, group, masterKey), serialisedRecord);
         
         await indexer.AddToIndex(structuredRecord);
     }
@@ -48,7 +48,7 @@ public sealed class Database
     /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
     public async Task<RecordStructure<T>?> GetRecord<T>(string masterKey) where T : notnull
     {
-        var group = nameof(T);
+        var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, masterKey);
 
         if (!File.Exists(path))
@@ -69,7 +69,7 @@ public sealed class Database
     /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
     public async Task<RecordStructure<T>[]> FindRecords<T>(string byProperty, string value) where T : notnull
     {
-        var group = nameof(T);
+        var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, "0si", byProperty);
 
         if (!File.Exists(path))
@@ -113,7 +113,7 @@ public sealed class Database
     /// <typeparam name="T">The data type of the record that is being deleted.</typeparam>
     public async Task DeleteRecord<T> (string masterKey, bool deleteRefrences = false) where T : notnull
     {
-        var group = nameof(T);
+        var group = typeof(T).Name;
         var recordPath = Path.Join(configuration.DataDirectory, group, masterKey);
         
         if (File.Exists(group))

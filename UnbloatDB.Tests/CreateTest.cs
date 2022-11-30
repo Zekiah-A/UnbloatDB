@@ -39,7 +39,7 @@ internal sealed class CreateTest
             );
 
             await Db.CreateRecord(artist);
-            await Db.CreateRecord(song);
+            await Db.CreateRecord<Song>(song);
         }
         return true;
     }

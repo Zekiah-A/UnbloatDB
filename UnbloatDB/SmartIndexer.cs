@@ -19,14 +19,13 @@ internal sealed class SmartIndexer
     /// <typeparam name="T">The type of record being stored within this group, so that the appropriate index files can be created.</typeparam>
     public void BuildGroupIndexDirectoryFor<T>()
     {
-        var template = typeof(T);
-        var path = Path.Join(configuration.DataDirectory, template.Name, "0si");
+        var path = Path.Join(configuration.DataDirectory, typeof(T).Name, "0si");
         
         //Create index directory in template's group
         Directory.CreateDirectory(path);
         
         //Populate index directory with appropiate index files
-        foreach (var property in template.GetProperties())
+        foreach (var property in typeof(T).GetProperties())
         {
             //TODO: Only index primitive types for now
             //if (!property.GetType().IsPrimitive) continue;
@@ -65,22 +64,22 @@ internal sealed class SmartIndexer
 
             var values = index.Select(keyValue => keyValue[0]) as string[];
             var propertyValue = property.GetValue(record.Data);
-
-            // Figure out where to put in index, so we do not need to sort later by first binary searching for
-            // same value, and appending after, if not alr in the array, we analyse where it should go.
-            var foundIndex = Array.BinarySearch(values, propertyValue);
-
-            if (foundIndex != -1)
+            
+            if (values is { Length: > 0 })
             {
-                index.Insert(foundIndex - 1, new[] { propertyValue as string, record.MasterKey });
-                await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
-                continue;
-            }
+                // Figure out where to put in index, so we do not need to sort later by first binary searching for
+                // same value, and appending after, if not alr in the array, we analyse where it should go.
+                var foundIndex = Array.BinarySearch(values, propertyValue);
 
-            // If we could not binary search in the index for another key with the same value we can place this before,
-            // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
-            if (values.Length > 0)
-            {
+                if (foundIndex != -1)
+                {
+                    index.Insert(foundIndex - 1, new[] { propertyValue as string, record.MasterKey });
+                    await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+                    continue;
+                }
+
+                // If we could not binary search in the index for another key with the same value we can place this before,
+                // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
                 var foundAny = false;
 
                 for (var i = 0; i < values.Length; i++)
