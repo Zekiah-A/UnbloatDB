@@ -6,7 +6,7 @@ using UnbloatDB.Tests;
 var databases = new List<Database>
 {
     new(new Config("json", new JsonSerialiser())),
-    new(new Config("yaml", new YamlSerialiser()))
+    //new(new Config("yaml", new YamlSerialiser()))
 };
 
 foreach (var database in databases)

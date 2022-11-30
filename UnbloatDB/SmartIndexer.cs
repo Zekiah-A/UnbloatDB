@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
 
@@ -27,8 +28,12 @@ internal sealed class SmartIndexer
         //Populate index directory with appropiate index files
         foreach (var property in typeof(T).GetProperties())
         {
-            //TODO: Only index primitive types for now
-            //if (!property.GetType().IsPrimitive) continue;
+            //TODO: Make this only index primitive types for now
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
+            {
+                continue;
+            }
+
             File.Create(Path.Join(path, property.Name));
         }
     }
@@ -49,6 +54,11 @@ internal sealed class SmartIndexer
         
         foreach (var property in typeof(T).GetProperties())
         {
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
+            {
+                continue;
+            }
+            
             var indexPath = Path.Join(path, property.Name);
 
             if (!File.Exists(indexPath))
@@ -58,10 +68,14 @@ internal sealed class SmartIndexer
               
             var indexFile = await File.ReadAllLinesAsync(indexPath);
             var index = indexFile
-                .Select(line => line.Split(" "))
-                .Where(keyVal => keyVal.Length == 2)
+                .Select(line =>
+                {
+                    var last = line.LastIndexOf(" ", StringComparison.Ordinal);
+                    return last == -1 ? null : new[] { line[..last], line[(last + 1)..] };
+                })
+                .Where(keyVal => keyVal is { Length: 2 })
                 .ToList();
-
+            
             var values = index.Select(keyValue => keyValue[0]) as string[];
             var propertyValue = property.GetValue(record.Data);
             
@@ -73,7 +87,7 @@ internal sealed class SmartIndexer
 
                 if (foundIndex != -1)
                 {
-                    index.Insert(foundIndex - 1, new[] { propertyValue as string, record.MasterKey });
+                    index.Insert(foundIndex - 1, new[] { propertyValue.ToString(), record.MasterKey });
                     await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
                     continue;
                 }
@@ -86,7 +100,7 @@ internal sealed class SmartIndexer
                 {
                     if (values[i].CompareTo(propertyValue) == -1) continue;
                     
-                    index.Insert(i - 1, new[] { propertyValue as string, record.MasterKey });
+                    index.Insert(i - 1, new[] { propertyValue.ToString(), record.MasterKey });
                     foundAny = true;
                 }
 
@@ -102,7 +116,7 @@ internal sealed class SmartIndexer
             index.Add(new[] { propertyValue as string, record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
             // Cache this index file to make subsequent loads faster
-            indexerCache.Add(indexPath, index);
+            // indexerCache.Add(indexPath, index);
         }
     }
     
