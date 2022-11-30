@@ -48,7 +48,7 @@ internal sealed class SmartIndexer
             // If there is no indexer directory for this group, then regenerate all indexes for this group.
         }
         
-        foreach (var property in record.Data.GetType().GetProperties())
+        foreach (var property in typeof(T).GetProperties())
         {
             var indexPath = Path.Join(path, property.Name);
 
@@ -64,7 +64,7 @@ internal sealed class SmartIndexer
                 .ToList();
 
             var values = index.Select(keyValue => keyValue[0]) as string[];
-            var propertyValue = property.GetValue(record);//object does not match target type
+            var propertyValue = property.GetValue(record.Data);
 
             // Figure out where to put in index, so we do not need to sort later by first binary searching for
             // same value, and appending after, if not alr in the array, we analyse where it should go.
@@ -102,7 +102,6 @@ internal sealed class SmartIndexer
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
             index.Add(new[] { propertyValue as string, record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
-
             // Cache this index file to make subsequent loads faster
             indexerCache.Add(indexPath, index);
         }
