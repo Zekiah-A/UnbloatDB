@@ -1,4 +1,5 @@
-﻿using UnbloatDB.Attributes;
+﻿using System.Reflection;
+using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
 
@@ -90,9 +91,9 @@ internal sealed class SmartIndexer
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not alr in the array, we analyse where it should go.
-                var foundIndex = Array.BinarySearch(values, propertyValue);
+                var foundIndex = Array.BinarySearch(values, propertyValue.ToString());
 
-                if (foundIndex != -1)
+                if (foundIndex > 0)
                 {
                     index.Insert(foundIndex - 1, new[] { propertyValue.ToString()!, record.MasterKey });
                     await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
@@ -105,7 +106,11 @@ internal sealed class SmartIndexer
 
                 for (var i = 0; i < values.Length; i++)
                 {
-                    if (values[i].CompareTo(propertyValue) == -1) continue; //TODO: BUG: We need to change the type of values[i] to the type of propertyValue, else exception
+                    var convertedValue = Convert.ChangeType(values[i], propertyValue.GetType()) as IComparable;
+                    if (convertedValue is null || convertedValue.CompareTo(propertyValue) == 1)
+                    {
+                        continue;
+                    }
                     
                     index.Insert(i - 1, new[] { propertyValue.ToString()!, record.MasterKey });
                     foundAny = true;
