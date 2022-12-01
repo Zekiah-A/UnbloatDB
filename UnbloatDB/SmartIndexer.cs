@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Text;
-using UnbloatDB.Attributes;
+﻿using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
 
@@ -74,13 +72,19 @@ internal sealed class SmartIndexer
                 .Select(line =>
                 {
                     var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-                    return last == -1 ? null : new[] { line[..last], line[(last + 1)..] };
+                    return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
                 })
                 .Where(keyVal => keyVal is { Length: 2 })
                 .ToList();
 
-            var values = index.Select(keyValue => keyValue![0]).ToImmutableArray();
-            var propertyValue = property.GetValue(record.Data)!; //TODO: Investigate course of action with null property values
+            var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+            var propertyValue = property.GetValue(record.Data);
+
+            //TODO: Do not index null values for now, way to handle such cases must be found later
+            if (propertyValue is null)
+            {
+                continue;
+            }
 
             if (values is { Length: > 0 })
             {
@@ -90,7 +94,7 @@ internal sealed class SmartIndexer
 
                 if (foundIndex != -1)
                 {
-                    index.Insert(foundIndex - 1, new[] { propertyValue.ToString(), record.MasterKey });
+                    index.Insert(foundIndex - 1, new[] { propertyValue.ToString()!, record.MasterKey });
                     await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
                     continue;
                 }
@@ -101,9 +105,9 @@ internal sealed class SmartIndexer
 
                 for (var i = 0; i < values.Length; i++)
                 {
-                    if (values[i].CompareTo(propertyValue) == -1) continue;
+                    if (values[i].CompareTo(propertyValue) == -1) continue; //TODO: BUG: We need to change the type of values[i] to the type of propertyValue, else exception
                     
-                    index.Insert(i - 1, new[] { propertyValue.ToString(), record.MasterKey });
+                    index.Insert(i - 1, new[] { propertyValue.ToString()!, record.MasterKey });
                     foundAny = true;
                 }
 
@@ -116,7 +120,7 @@ internal sealed class SmartIndexer
 
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue.ToString(), record.MasterKey });
+            index.Add(new[] { propertyValue.ToString()!, record.MasterKey });
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
             // Cache this index file to make subsequent loads faster
             // indexerCache.Add(indexPath, index);
