@@ -29,7 +29,6 @@ internal sealed class SmartIndexer
         foreach (var property in typeof(T).GetProperties())
         {
             //TODO: Make this only index primitive types for now
-            //TODO: Attribute not working
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
@@ -55,7 +54,6 @@ internal sealed class SmartIndexer
         
         foreach (var property in typeof(T).GetProperties())
         {
-            //TODO: Attribute not working
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
@@ -95,7 +93,7 @@ internal sealed class SmartIndexer
 
                 if (foundIndex > 0)
                 {
-                    index.Insert(foundIndex - 1, new[] { propertyValue.ToString()!, record.MasterKey });
+                    index.Insert(foundIndex - 1, new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
                     await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
                     continue;
                 }
@@ -106,13 +104,24 @@ internal sealed class SmartIndexer
 
                 for (var i = 0; i < values.Length; i++)
                 {
-                    var convertedValue = Convert.ChangeType(values[i], propertyValue.GetType()) as IComparable;
+                    IComparable? convertedValue; 
+                    
+                    if (propertyValue.GetType().IsEnum)
+                    {
+                        convertedValue = (int) Enum.Parse(propertyValue.GetType(), values[i].ToString()!);
+                        propertyValue = (int) propertyValue;
+                    }
+                    else
+                    {
+                        convertedValue = Convert.ChangeType(values[i], propertyValue.GetType()) as IComparable;
+                    }
+                    
                     if (convertedValue is null || convertedValue.CompareTo(propertyValue) == 1)
                     {
                         continue;
                     }
                     
-                    index.Insert(i - 1, new[] { propertyValue.ToString()!, record.MasterKey });
+                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
                     foundAny = true;
                 }
 
@@ -125,7 +134,7 @@ internal sealed class SmartIndexer
 
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue.ToString()!, record.MasterKey });
+            index.Add(new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
             // Cache this index file to make subsequent loads faster
             // indexerCache.Add(indexPath, index);

@@ -4,4 +4,4 @@ using UnbloatDB.Tests.Types;
 namespace UnbloatDB.Records;
 
 //TODO: Add inter/intrakey data
-internal sealed record Song([DoNotIndex] string File, Genre Genre, string Date);
+internal sealed record Song([property: DoNotIndex] string File, Genre Genre, string Date);
