@@ -26,7 +26,7 @@ public sealed class Database
         if (!Directory.Exists(groupPath))
         {
             Directory.CreateDirectory(groupPath); //Type template
-            indexer.BuildGroupIndexDirectoryFor<T>();
+            await indexer.BuildGroupIndexDirectoryFor<T>();
         }
         
         var serialisedRecord = await configuration.FileFormat.Serialise(structuredRecord);
@@ -65,7 +65,7 @@ public sealed class Database
     public async Task<RecordStructure<T>[]> FindRecords<T>(string byProperty, string value) where T : notnull
     {
         var group = typeof(T).Name;
-        var path = Path.Join(configuration.DataDirectory, group, "0si", byProperty);
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
 
         if (!File.Exists(path))
         {
@@ -85,6 +85,8 @@ public sealed class Database
         var values = index.Select(keyValue => keyValue[0]) as string[];
         var found = new List<RecordStructure<T>>();
 
+        //TODO: Add special case for enums
+        
         var position = Array.BinarySearch(values, value);
         while (position != -1)
         {

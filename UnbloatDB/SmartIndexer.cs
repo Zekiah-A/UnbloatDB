@@ -18,9 +18,9 @@ internal sealed class SmartIndexer
     /// Creates the indexer directory, used for storing record indexes of a group
     /// </summary>
     /// <typeparam name="T">The type of record being stored within this group, so that the appropriate index files can be created.</typeparam>
-    public void BuildGroupIndexDirectoryFor<T>()
+    public async Task BuildGroupIndexDirectoryFor<T>()
     {
-        var path = Path.Join(configuration.DataDirectory, typeof(T).Name, "0si");
+        var path = Path.Join(configuration.DataDirectory, typeof(T).Name, configuration.IndexerDirectory);
         
         //Create index directory in template's group
         Directory.CreateDirectory(path);
@@ -34,7 +34,7 @@ internal sealed class SmartIndexer
                 continue;
             }
 
-            File.Create(Path.Join(path, property.Name));
+            await File.WriteAllTextAsync(Path.Join(path, property.Name), "");
         }
     }
 
@@ -45,11 +45,12 @@ internal sealed class SmartIndexer
     public async Task AddToIndex<T>(RecordStructure<T> record) where T : notnull
     {
         var group = typeof(T).Name;
-        var path = Path.Join(configuration.DataDirectory, group, "0si");
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory);
 
+        // If there is no indexer directory for this group, then regenerate all indexes for this group.
         if (!Directory.Exists(path))
         {
-            // If there is no indexer directory for this group, then regenerate all indexes for this group.
+            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " + path);
         }
         
         foreach (var property in typeof(T).GetProperties())
@@ -61,11 +62,12 @@ internal sealed class SmartIndexer
             
             var indexPath = Path.Join(path, property.Name);
 
+            // If there is no indexer for this specific property, then regenerate indexes for just this property.
             if (!File.Exists(indexPath))
             {
-                // If there is no indexer for this specific property, then regenerate indexes for just this property.
+                throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
             }
-              
+
             var indexFile = await File.ReadAllLinesAsync(indexPath);
             var index = indexFile
                 .Select(line =>
@@ -93,7 +95,7 @@ internal sealed class SmartIndexer
 
                 if (foundIndex > 0)
                 {
-                    index.Insert(foundIndex - 1, new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
+                    index.Insert(foundIndex - 1, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
                     await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
                     continue;
                 }
@@ -121,7 +123,7 @@ internal sealed class SmartIndexer
                         continue;
                     }
                     
-                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
+                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
                     foundAny = true;
                 }
 
@@ -134,7 +136,7 @@ internal sealed class SmartIndexer
 
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue.GetType().IsEnum ? propertyValue.ToString() : ((int) propertyValue).ToString(), record.MasterKey }!);
+            index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
             await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
             // Cache this index file to make subsequent loads faster
             // indexerCache.Add(indexPath, index);

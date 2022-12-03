@@ -12,7 +12,7 @@ var databases = new List<Database>
 foreach (var database in databases)
 {
     // Test creating 5000 account records, and song records with randomised values
-    var createTest = new CreateTest(database, 5000);
+    var createTest = new CreateTest(database, 50);
     Console.WriteLine("Result of Create test: " + await createTest.RunTest());
 }
 
