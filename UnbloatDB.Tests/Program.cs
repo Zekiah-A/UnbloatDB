@@ -19,5 +19,8 @@ foreach (var database in databases)
 
     var getTest = new GetTest(database);
     Console.WriteLine("Result of Get test: " + await getTest.RunTest());
+
+    var findTest = new FindTest(database);
+    Console.WriteLine("Result of Find test: " + await findTest.RunTest());
 }
 

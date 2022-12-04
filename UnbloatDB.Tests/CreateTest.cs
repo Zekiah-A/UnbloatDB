@@ -26,13 +26,13 @@ internal sealed class CreateTest
             (
                 Random.Next(0, 82),
                 Variants.Location[Random.Next(0, Variants.Location.Length - 1)],
-                (Gender) Random.Next(0, 3)
+                (Gender) Random.Next(3)
             );
 
             var song = new Song
             (
                 Random.Next(0, 1000).ToString(),
-                (Genre) Random.Next(0, 3),
+                (Genre) Random.Next(4),
                 new DateTime().AddDays(Random.Next(0, 10000)).ToString(CultureInfo.InvariantCulture)
             );
 

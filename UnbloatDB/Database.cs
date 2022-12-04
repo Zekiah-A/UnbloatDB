@@ -80,23 +80,26 @@ public sealed class Database
         
         var indexFile = await File.ReadAllLinesAsync(path);
         var index = indexFile
-            .Select(line => line.Split(" "))
-            .Where(keyVal => keyVal.Length == 2)
+            .Select(line =>
+            {
+                var last = line.LastIndexOf(" ", StringComparison.Ordinal);
+                return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
+            })
             .ToList();
-        
-        var keys = index.Select(keyValue => keyValue[1]) as string[];
-        var values = index.Select(keyValue => keyValue[0]) as string[];
+
+        var values = index.Select(keyValue => keyValue[0]).ToArray();
         var found = new List<RecordStructure<T>>();
 
         //TODO: Add special case for enums
-        
+
         var position = Array.BinarySearch(values, value);
-        while (position != -1)
+        while (position > 0)
         {
-            var record = await GetRecord<T>(keys[position]);
+            var record = await GetRecord<T>(index[position][1]);
             if (record is not null)
             {
-                found.Add(record);    
+                found.Add(record);
+                values = values.RemoveAt(position);
             }
 
             position = Array.BinarySearch(values, value);
