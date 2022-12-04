@@ -92,7 +92,7 @@ internal sealed class SmartIndexer
 
                 if (foundIndex > 0)
                 {
-                    index.Insert(foundIndex - 1, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+                    index.Insert(foundIndex, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
                     await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     continue;
                 }*/
@@ -118,7 +118,7 @@ internal sealed class SmartIndexer
                         continue;
                     }
                     
-                    index.Insert(i - 1 > 0 ? i - 1 : 0, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
                     await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     break;
                 }
@@ -127,8 +127,8 @@ internal sealed class SmartIndexer
             }
 
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            //index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
-            //await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+            index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+            await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
     }
 
