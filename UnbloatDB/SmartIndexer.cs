@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Text;
 using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
@@ -6,12 +7,10 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
-    private readonly Dictionary<string, List<string[]>> indexerCache;
     
     public SmartIndexer(Config config)
     {
         configuration = config;
-        indexerCache = new Dictionary<string, List<string[]>>();
     }
 
     /// <summary>
@@ -62,7 +61,6 @@ internal sealed class SmartIndexer
             
             var indexPath = Path.Join(path, property.Name);
 
-            // If there is no indexer for this specific property, then regenerate indexes for just this property.
             if (!File.Exists(indexPath))
             {
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
@@ -75,10 +73,9 @@ internal sealed class SmartIndexer
                     var last = line.LastIndexOf(" ", StringComparison.Ordinal);
                     return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
                 })
-                .Where(keyVal => keyVal is { Length: 2 })
                 .ToList();
 
-            var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+            var values = index.Select(keyValue => keyValue[0]).ToArray();
             var propertyValue = property.GetValue(record.Data);
 
             //TODO: Do not index null values for now, way to handle such cases must be found later
@@ -90,27 +87,25 @@ internal sealed class SmartIndexer
             if (values is { Length: > 0 })
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
-                // same value, and appending after, if not alr in the array, we analyse where it should go.
-                var foundIndex = Array.BinarySearch(values, propertyValue.ToString());
+                // same value, and appending after, if not already in the array, we analyse where it should go.
+                /*var foundIndex = Array.BinarySearch(values, propertyValue.ToString());
 
                 if (foundIndex > 0)
                 {
                     index.Insert(foundIndex - 1, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
-                    await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     continue;
-                }
+                }*/
 
                 // If we could not binary search in the index for another key with the same value we can place this before,
                 // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
-                var foundAny = false;
-
                 for (var i = 0; i < values.Length; i++)
                 {
-                    IComparable? convertedValue; 
-                    
+                    IComparable? convertedValue;
+
                     if (propertyValue.GetType().IsEnum)
                     {
-                        convertedValue = (int) Enum.Parse(propertyValue.GetType(), values[i].ToString()!);
+                        convertedValue = (int) Enum.Parse(propertyValue.GetType(), values[i]);
                         propertyValue = (int) propertyValue;
                     }
                     else
@@ -118,29 +113,36 @@ internal sealed class SmartIndexer
                         convertedValue = Convert.ChangeType(values[i], propertyValue.GetType()) as IComparable;
                     }
                     
-                    if (convertedValue is null || convertedValue.CompareTo(propertyValue) == 1)
+                    if (convertedValue is null || convertedValue.CompareTo(propertyValue) == -1)
                     {
                         continue;
                     }
                     
-                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
-                    foundAny = true;
+                    index.Insert(i - 1 > 0 ? i - 1 : 0, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+                    break;
                 }
-
-                if (foundAny)
-                {
-                    await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
-                    continue;
-                }
+                
+                continue;
             }
 
-            
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
-            await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
-            // Cache this index file to make subsequent loads faster
-            // indexerCache.Add(indexPath, index);
+            //index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+            //await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
+    }
+
+    // TODO: Benchmark performance of BuildIndex over await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
+    private static string BuildIndex(in List<string[]> index)
+    {
+        var builder = new StringBuilder();
+        foreach (var pair in index)
+        {
+            builder.AppendJoin(" ", pair);
+            builder.Append(Environment.NewLine);
+        }
+
+        return builder.ToString();
     }
     
     public async Task RemoveFromIndex<T>(string masterKey)

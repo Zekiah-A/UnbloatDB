@@ -16,7 +16,8 @@ public sealed class Database
     /// </summary>
     /// <param name="data">The data of the record we are creating (assigned a master key, converted into record structure by DB).</param>
     /// <typeparam name="T">The data type of the record we are creating.</typeparam>
-    public async Task CreateRecord<T> (T data) where T : notnull
+    /// <returns> String master key of the newly created record </returns>
+    public async Task<string> CreateRecord<T> (T data) where T : notnull
     {
         var group = typeof(T).Name;
         var masterKey = Guid.NewGuid().ToString();
@@ -33,6 +34,8 @@ public sealed class Database
         await File.WriteAllTextAsync(Path.Join(configuration.DataDirectory, group, masterKey), serialisedRecord);
         
         await indexer.AddToIndex(structuredRecord);
+
+        return masterKey;
     }
 
     /// <summary>

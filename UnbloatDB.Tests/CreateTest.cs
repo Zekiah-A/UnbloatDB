@@ -22,8 +22,6 @@ internal sealed class CreateTest
     {
         for (var i = 0; i < RecordCount; i++)
         {
-            var guid = Guid.NewGuid();
-            
             var artist = new Artist
             (
                 Random.Next(0, 82),
@@ -33,14 +31,15 @@ internal sealed class CreateTest
 
             var song = new Song
             (
-                guid.ToString(),
+                Random.Next(0, 1000).ToString(),
                 (Genre) Random.Next(0, 3),
                 new DateTime().AddDays(Random.Next(0, 10000)).ToString(CultureInfo.InvariantCulture)
             );
 
             await Db.CreateRecord(artist);
-            await Db.CreateRecord<Song>(song);
+            await Db.CreateRecord(song);
         }
+        
         return true;
     }
 }
