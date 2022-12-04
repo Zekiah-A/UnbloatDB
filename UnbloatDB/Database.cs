@@ -65,7 +65,7 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecords<T>(string byProperty, string value) where T : notnull
+    public async Task<RecordStructure<T>[]> FindRecords<T, U>(string byProperty, U value) where T : notnull where U : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
@@ -77,7 +77,7 @@ public sealed class Database
             // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
             // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
         }
-        
+
         var indexFile = await File.ReadAllLinesAsync(path);
         var index = indexFile
             .Select(line =>
@@ -89,10 +89,11 @@ public sealed class Database
 
         var values = index.Select(keyValue => keyValue[0]).ToArray();
         var found = new List<RecordStructure<T>>();
+        var convertedValue = typeof(U).IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : value.ToString(); //TODO: Not all enums use int, use getTypeCode instead
 
         //TODO: Add special case for enums
 
-        var position = Array.BinarySearch(values, value);
+        var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
             var record = await GetRecord<T>(index[position][1]);
@@ -102,7 +103,7 @@ public sealed class Database
                 values = values.RemoveAt(position);
             }
 
-            position = Array.BinarySearch(values, value);
+            position = Array.BinarySearch(values, convertedValue);
         }
 
         return found.ToArray(); 

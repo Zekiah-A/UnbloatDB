@@ -5,7 +5,7 @@ namespace UnbloatDB.Tests;
 
 internal sealed class FindTest
 {
-    public Database Db;
+    private Database Db { get; }
 
     public FindTest(Database database)
     {
@@ -16,8 +16,8 @@ internal sealed class FindTest
     {
         var expected = new Artist(10, "Bradford", Gender.Male);
 
-        var masterKey = await Db.CreateRecord(expected);
-
+        await Db.CreateRecord(expected);
+        
         var results = await Db.FindRecords<Artist>("Location", "Bradford");
 
         return results.Select(result => result.Data).Contains(expected);

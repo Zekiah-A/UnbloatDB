@@ -7,9 +7,9 @@ namespace UnbloatDB.Tests;
 
 internal sealed class CreateTest
 {
-    public int RecordCount { get; }
-    public Database Db;
-    public Random Random { get; }
+    private int RecordCount { get; }
+    private Database Db { get; }
+    private Random Random { get; }
 
     public CreateTest(Database database, int recordCount)
     {

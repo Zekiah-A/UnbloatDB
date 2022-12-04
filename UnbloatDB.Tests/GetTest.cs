@@ -6,7 +6,7 @@ namespace UnbloatDB.Tests;
 
 internal sealed class GetTest
 {
-    public Database Db;
+    private Database Db { get; }
 
     public GetTest(Database database)
     {
