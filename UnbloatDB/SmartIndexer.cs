@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text;
 using UnbloatDB.Attributes;
 
@@ -66,15 +66,7 @@ internal sealed class SmartIndexer
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
             }
 
-            var indexFile = await File.ReadAllLinesAsync(indexPath);
-            var index = indexFile
-                .Select(line =>
-                {
-                    var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-                    return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
-                })
-                .ToList();
-
+            var index = await ReadIndex(path);
             var values = index.Select(keyValue => keyValue[0]).ToArray();
             var propertyValue = property.GetValue(record.Data);
 
@@ -153,5 +145,16 @@ internal sealed class SmartIndexer
     public async Task RegenerateAllIndexes()
     {
         //To-do
+    }
+
+    internal static async Task<List<string>> ReadIndex(string path)
+    {
+        return await File.ReadAllLinesAsync(path)
+            .Select(line =>
+            {
+                var last = line.LastIndexOf(" ", StringComparison.Ordinal);
+                return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
+            })
+            .ToList();
     }
 }
