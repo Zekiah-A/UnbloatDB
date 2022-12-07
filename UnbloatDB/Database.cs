@@ -78,15 +78,7 @@ public sealed class Database
             // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
         }
 
-        var indexFile = await File.ReadAllLinesAsync(path);
-        var index = indexFile
-            .Select(line =>
-            {
-                var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-                return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
-            })
-            .ToList();
-
+        var index = await SmartIndexer.ReadIndex(path);
         var values = index.Select(keyValue => keyValue[0]).ToArray();
         var found = new List<RecordStructure<T>>();
         var convertedValue = typeof(U).IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : value.ToString(); //TODO: Not all enums use int, use getTypeCode instead
