@@ -80,14 +80,14 @@ internal sealed class SmartIndexer
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not already in the array, we analyse where it should go.
-                /*var foundIndex = Array.BinarySearch(values, propertyValue.ToString());
+                var foundIndex = Array.BinarySearch(values, propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString());
 
                 if (foundIndex > 0)
                 {
                     index.Insert(foundIndex, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
                     await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     continue;
-                }*/
+                }
 
                 // If we could not binary search in the index for another key with the same value we can place this before,
                 // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
