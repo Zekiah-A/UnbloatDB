@@ -101,6 +101,8 @@ internal sealed class SmartIndexer
 
                 // If we could not binary search in the index for another key with the same value we can place this before,
                 // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
+                var found = false;
+                
                 for (var i = 0; i < values.Length; i++)
                 {
                     IComparable? convertedValue;
@@ -121,11 +123,14 @@ internal sealed class SmartIndexer
                     }
                     
                     index.Insert(i, new[] { StringifyObject(propertyValue), record.MasterKey }!);
-                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     break;
                 }
                 
-                continue;
+                if (found)
+                {
+                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+                    continue;
+                }
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
