@@ -36,6 +36,16 @@ internal sealed class SmartIndexer
             await File.WriteAllTextAsync(Path.Join(path, property.Name), "");
         }
     }
+    
+    public async Task RemoveFromIndex<T>(string masterKey)
+    {
+        //To-do
+    }
+
+    public async Task RegenerateAllIndexes()
+    {
+        //To-do
+    }
 
     /// <summary>
     /// Create index data for each of a record's properties, so that it can be searched for by property and located quickly.
@@ -66,7 +76,7 @@ internal sealed class SmartIndexer
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
             }
 
-            var index = await ReadIndex(path);
+            var index = await ReadIndex(indexPath);
             var values = index.Select(keyValue => keyValue[0]).ToArray();
             var propertyValue = property.GetValue(record.Data);
 
@@ -80,11 +90,11 @@ internal sealed class SmartIndexer
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not already in the array, we analyse where it should go.
-                var foundIndex = Array.BinarySearch(values, propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString());
+                var foundIndex = Array.BinarySearch(values, StringifyObject(propertyValue));
 
                 if (foundIndex > 0)
                 {
-                    index.Insert(foundIndex, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+                    index.Insert(foundIndex, new[] { StringifyObject(propertyValue), record.MasterKey }!);
                     await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     continue;
                 }
@@ -110,16 +120,16 @@ internal sealed class SmartIndexer
                         continue;
                     }
                     
-                    index.Insert(i, new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+                    index.Insert(i, new[] { StringifyObject(propertyValue), record.MasterKey }!);
                     await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                     break;
                 }
                 
                 continue;
             }
-
+            
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { propertyValue.GetType().IsEnum ? ((int) propertyValue).ToString() : propertyValue.ToString(), record.MasterKey }!);
+            index.Add(new[] { StringifyObject(propertyValue), record.MasterKey }!);
             await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
     }
@@ -136,21 +146,17 @@ internal sealed class SmartIndexer
 
         return builder.ToString();
     }
+
+    internal static string StringifyObject<T>(T value) where T : notnull
+    {
+        //TODO: 🤓 Not all enums use int, use getTypeCode instead
+        return (value.GetType().IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : value.ToString())!;
+    }
     
-    public async Task RemoveFromIndex<T>(string masterKey)
+    internal static async Task<List<string[]>> ReadIndex(string path)
     {
-        //To-do
-    }
-
-    public async Task RegenerateAllIndexes()
-    {
-        //To-do
-    }
-
-    internal static async Task<List<string>> ReadIndex(string path)
-    {
-        return await File.ReadAllLinesAsync(path)
-            .Select(line =>
+        var text = await File.ReadAllLinesAsync(path);
+        return text.Select(line =>
             {
                 var last = line.LastIndexOf(" ", StringComparison.Ordinal);
                 return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };

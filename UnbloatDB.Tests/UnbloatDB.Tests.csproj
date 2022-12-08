@@ -11,4 +11,8 @@
         <ProjectReference Include="../UnbloatDB/UnbloatDB.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="BinaryPack" Version="1.0.3" />
+    </ItemGroup>
+
 </Project>
