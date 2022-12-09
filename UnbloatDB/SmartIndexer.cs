@@ -90,47 +90,11 @@ internal sealed class SmartIndexer
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not already in the array, we analyse where it should go.
+                // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
+                // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, StringifyObject(propertyValue));
-
-                if (foundIndex > 0)
-                {
-                    index.Insert(foundIndex, new[] { StringifyObject(propertyValue), record.MasterKey }!);
-                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
-                    continue;
-                }
-
-                // If we could not binary search in the index for another key with the same value we can place this before,
-                // iterate through values until we find a value that is greater than new, and then jump back by one to give a sorted list.
-                var found = false;
-                
-                for (var i = 0; i < values.Length; i++)
-                {
-                    IComparable? convertedValue;
-
-                    if (propertyValue.GetType().IsEnum)
-                    {
-                        convertedValue = (int) Enum.Parse(propertyValue.GetType(), values[i]);
-                        propertyValue = (int) propertyValue;
-                    }
-                    else
-                    {
-                        convertedValue = Convert.ChangeType(values[i], propertyValue.GetType()) as IComparable;
-                    }
-                    
-                    if (convertedValue is null || convertedValue.CompareTo(propertyValue) == -1)
-                    {
-                        continue;
-                    }
-                    
-                    index.Insert(i, new[] { StringifyObject(propertyValue), record.MasterKey }!);
-                    break;
-                }
-                
-                if (found)
-                {
-                    await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
-                    continue;
-                }
+                index.Insert(foundIndex > 0 ? foundIndex : ~foundIndex - 1, new[] { StringifyObject(propertyValue), record.MasterKey }!);
+                await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.

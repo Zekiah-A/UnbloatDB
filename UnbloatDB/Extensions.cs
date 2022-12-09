@@ -5,6 +5,7 @@ public static class Extensions
     public static T[] RemoveAt<T>(this T[] source, int index)
     {
         var dest = new T[source.Length - 1];
+        
         if (index > 0)
         {
             Array.Copy(source, 0, dest, 0, index);
