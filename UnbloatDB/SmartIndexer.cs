@@ -95,6 +95,7 @@ internal sealed class SmartIndexer
                 var foundIndex = Array.BinarySearch(values, StringifyObject(propertyValue));
                 index.Insert(foundIndex > 0 ? foundIndex : ~foundIndex - 1, new[] { StringifyObject(propertyValue), record.MasterKey }!);
                 await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+                continue;
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
