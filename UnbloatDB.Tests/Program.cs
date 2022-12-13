@@ -14,7 +14,7 @@ foreach (var database in databases)
     Console.WriteLine("-----------------------------------");
     
     // Test creating multiple account records, and song records with randomised values
-    var createTest = new CreateTest(database, 10000);
+    var createTest = new CreateTest(database, 100);
     Console.WriteLine("Result of Create test: " + await createTest.RunTest());
 
     var getTest = new GetTest(database);

@@ -93,13 +93,13 @@ internal sealed class SmartIndexer
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, StringifyObject(propertyValue));
-                index.Insert(foundIndex > 0 ? foundIndex : ~foundIndex - 1, new[] { StringifyObject(propertyValue), record.MasterKey }!);
+                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new[] { StringifyObject(propertyValue), record.MasterKey });
                 await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                 continue;
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { StringifyObject(propertyValue), record.MasterKey }!);
+            index.Add(new[] { StringifyObject(propertyValue), record.MasterKey });
             await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
     }
