@@ -92,14 +92,14 @@ internal sealed class SmartIndexer
                 // same value, and appending after, if not already in the array, we analyse where it should go.
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
-                var foundIndex = Array.BinarySearch(values, StringifyObject(propertyValue));
-                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new[] { StringifyObject(propertyValue), record.MasterKey });
+                var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
+                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new[] { FormatObject(propertyValue).ToString()!, record.MasterKey });
                 await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                 continue;
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { StringifyObject(propertyValue), record.MasterKey });
+            index.Add(new[] { FormatObject(propertyValue).ToString()!, record.MasterKey });
             await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
     }
@@ -110,17 +110,19 @@ internal sealed class SmartIndexer
         var builder = new StringBuilder();
         foreach (var pair in index)
         {
-            builder.AppendJoin(" ", pair);
+            builder.Append(pair[0]);
+            builder.Append(' ');
+            builder.Append(pair[1]);
             builder.Append(Environment.NewLine);
         }
 
         return builder.ToString();
     }
 
-    internal static string StringifyObject<T>(T value) where T : notnull
+    internal static object FormatObject<T>(T value) where T : notnull
     {
         //TODO: 🤓 Not all enums use int, use getTypeCode instead
-        return (value.GetType().IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : value.ToString())!;
+        return (value.GetType().IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
     }
     
     internal static async Task<List<string[]>> ReadIndex(string path)

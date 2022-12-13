@@ -81,7 +81,7 @@ public sealed class Database
         var index = await SmartIndexer.ReadIndex(path);
         var values = index.Select(keyValue => keyValue[0]).ToArray();
         var found = new List<RecordStructure<T>>();
-        var convertedValue = SmartIndexer.StringifyObject(value);
+        var convertedValue = SmartIndexer.FormatObject(value);
 
         //TODO: Add special case for enums
 
