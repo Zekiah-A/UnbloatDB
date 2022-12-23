@@ -101,6 +101,10 @@ public sealed class Database
         return found.ToArray(); 
     }
 
+    /// <summary>
+    /// Updates saved data and indexer information for a record without mutating it's master key / reference.
+    /// </summary>
+    /// <param name="record">Record structure of updated record</param>
     public async Task<bool> UpdateRecord<T>(RecordStructure<T> record) where T : notnull
     {
         var group = typeof(T).Name;
