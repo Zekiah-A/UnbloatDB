@@ -48,6 +48,49 @@ internal sealed class SmartIndexer
     }
 
     /// <summary>
+    /// Removes each property of a record structure from the record indexer
+    /// </summary>
+    /// <param name="record">Record being removed from indexer</param>
+    public async Task RemoveFromIndex<T>(RecordStructure<T> record) where T : notnull
+    {
+        var group = typeof(T).Name;
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory);
+
+        // If there is no indexer directory for this group, then regenerate all indexes for this group.
+        if (!Directory.Exists(path))
+        {
+            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " + path);
+        }
+        
+        foreach (var property in typeof(T).GetProperties())
+        {
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
+            {
+                continue;
+            }
+            
+            var indexPath = Path.Join(path, property.Name);
+
+            if (!File.Exists(indexPath))
+            {
+                throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
+            }
+
+            var index = await ReadIndex(indexPath);
+            var keys = index.Select(keyValue => keyValue[1]).ToArray();
+            var found = Array.IndexOf(keys, record.MasterKey);
+
+            if (found == -1)
+            {
+                continue;
+            }
+            
+            index.RemoveAt(found);
+            await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+        }
+    }
+
+    /// <summary>
     /// Create index data for each of a record's properties, so that it can be searched for by property and located quickly.
     /// </summary>
     /// <param name="record">Record being indexed by smart indexer</param>
@@ -104,7 +147,6 @@ internal sealed class SmartIndexer
         }
     }
 
-    // TODO: Benchmark performance of BuildIndex over await File.WriteAllLinesAsync(indexPath, index.Select(pair => string.Join(" ", pair)));
     private static string BuildIndex(in List<string[]> index)
     {
         var builder = new StringBuilder();

@@ -101,6 +101,27 @@ public sealed class Database
         return found.ToArray(); 
     }
 
+    public async Task<bool> UpdateRecord<T>(RecordStructure<T> record) where T : notnull
+    {
+        var group = typeof(T).Name;
+        var groupPath = Path.Join(configuration.DataDirectory, group);
+
+        if (!Directory.Exists(groupPath))
+        {
+            return false;
+        }
+        
+        await indexer.RemoveFromIndex(record);
+
+        var serialisedRecord = await configuration.FileFormat.Serialise(record);
+        await File.WriteAllTextAsync(Path.Join(configuration.DataDirectory, group, record.MasterKey), serialisedRecord);
+
+        // Regenerate record indexes
+        await indexer.AddToIndex(record);
+
+        return true;
+    } 
+
     /// <summary>
     /// Deletes a specified record (via masterkey) from the database.
     /// </summary>
