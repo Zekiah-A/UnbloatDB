@@ -60,11 +60,12 @@ public sealed class Database
     }
     
     /// <summary>
-    /// Gets the first record from a supplied query property and value being searched for.
+    /// Gets the first record from a supplied query property and value being searched for. For getting a record by it's
+    /// unique Master Key, please use GetRecord<T>(string masterKey) instead.
     /// </summary>
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
-    /// <typeparam name="T">The data type of the record we are searching for.</typeparam>
+    /// <typeparam name="U">The data type of the record we are searching for.</typeparam>
     public async Task<RecordStructure<T>[]> FindRecords<T, U>(string byProperty, U value) where T : notnull where U : notnull
     {
         var group = typeof(T).Name;
@@ -72,6 +73,7 @@ public sealed class Database
 
         if (!File.Exists(path))
         {
+            // TODO: File safety. 
             // If this group doesn't even exist in the DB, fail.
             // If the group does exist, but the property they are searching for does not in the record type, fail.
             // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
@@ -79,12 +81,10 @@ public sealed class Database
         }
 
         var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue[0]).ToArray();
+        var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var convertedValue = SmartIndexer.FormatObject(value);
-
-        //TODO: Add special case for enums
-
+        
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
@@ -141,5 +141,41 @@ public sealed class Database
         {
             File.Delete(recordPath);
         }
+    }
+    
+    /// <summary>
+    /// Gets all records with a value that preceeds that of the given input. For example, in a database of ages from 1-10,
+    /// if searched value is "Age 5" this method will return the records with ages 1-5. If descending is true, it will be
+    /// returned in order of 5-1.
+    /// </summary>
+    /// <param name="byProperty">Name of property in record that we are searching for.</param>
+    /// <param name="value">Value of the property being searched for.</param>
+    /// <typeparam name="U">The data type of the record we are searching for.</typeparam>
+    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, U>(string byProperty, U value, bool descending) where T : notnull where U : notnull
+    {
+        var group = typeof(T).Name;
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
+
+        if (!File.Exists(path))
+        {
+            // TODO: File safety
+            // If this group doesn't even exist in the DB, fail.
+            // If the group does exist, but the property they are searching for does not in the record type, fail.
+            // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
+            // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
+        }
+
+        var index = await SmartIndexer.ReadIndex(path);
+        var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+        var found = new List<RecordStructure<T>>();
+        var position = 0;
+
+        while ((value as IComparable).CompareTo(values[position]) != -1)
+        {
+            found.Add(await GetRecord<T>(index.ElementAt(position)[1]));
+            position++;
+        }
+
+        return found.ToArray();
     }
 }

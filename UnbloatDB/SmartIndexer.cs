@@ -37,11 +37,6 @@ internal sealed class SmartIndexer
         }
     }
     
-    public async Task RemoveFromIndex<T>(string masterKey)
-    {
-        //To-do
-    }
-
     public async Task RegenerateAllIndexes()
     {
         //To-do
@@ -120,7 +115,7 @@ internal sealed class SmartIndexer
             }
 
             var index = await ReadIndex(indexPath);
-            var values = index.Select(keyValue => keyValue[0]).ToArray();
+            var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
             var propertyValue = property.GetValue(record.Data);
 
             //TODO: Do not index null values for now, way to handle such cases must be found later
@@ -163,18 +158,22 @@ internal sealed class SmartIndexer
 
     internal static object FormatObject<T>(T value) where T : notnull
     {
-        //TODO: 🤓 Not all enums use int, use getTypeCode instead
-        return (value.GetType().IsEnum ? Convert.ChangeType(value, typeof(int)).ToString() : int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
+        return (value.GetType().IsEnum ?
+            Convert.ChangeType(value, typeof(int)).ToString() :
+            int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
     }
     
     internal static async Task<List<string[]>> ReadIndex(string path)
     {
         var text = await File.ReadAllLinesAsync(path);
-        return text.Select(line =>
-            {
-                var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-                return last == -1 ? Array.Empty<string>() : new[] { line[..last], line[(last + 1)..] };
-            })
-            .ToList();
+        var index = new List<string[]>();
+
+        foreach (var line in text)
+        {
+            var last = line.LastIndexOf(" ", StringComparison.Ordinal);
+            index.Add(new [] { line[..last], line[(last + 1)..] });
+        }
+
+        return index;
     }
 }
