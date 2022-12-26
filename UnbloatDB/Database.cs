@@ -151,7 +151,7 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="U">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, U>(string byProperty, U value, bool descending) where T : notnull where U : notnull
+    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, U>(string byProperty, U value, bool descending = false) where T : notnull where U : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
@@ -179,6 +179,11 @@ public sealed class Database
         {
             found.Add((await GetRecord<T>(index.ElementAt(position).Value))!);
             position++;
+        }
+
+        if (descending)
+        {
+            found.Reverse();
         }
 
         return found.ToArray();
