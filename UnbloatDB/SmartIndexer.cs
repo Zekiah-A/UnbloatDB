@@ -72,7 +72,7 @@ internal sealed class SmartIndexer
             }
 
             var index = await ReadIndex(indexPath);
-            var keys = index.Select(keyValue => keyValue[1]).ToArray();
+            var keys = index.Select(keyValue => keyValue.Value).ToArray();
             var found = Array.IndexOf(keys, record.MasterKey);
 
             if (found == -1)
@@ -115,7 +115,7 @@ internal sealed class SmartIndexer
             }
 
             var index = await ReadIndex(indexPath);
-            var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+            var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
             var propertyValue = property.GetValue(record.Data);
 
             //TODO: Do not index null values for now, way to handle such cases must be found later
@@ -131,25 +131,25 @@ internal sealed class SmartIndexer
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
-                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new[] { FormatObject(propertyValue).ToString()!, record.MasterKey });
+                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
                 await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
                 continue;
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new[] { FormatObject(propertyValue).ToString()!, record.MasterKey });
+            index.Add(new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
             await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
         }
     }
 
-    private static string BuildIndex(in List<string[]> index)
+    private static string BuildIndex(in List<KeyValuePair<string, string>> index)
     {
         var builder = new StringBuilder();
         foreach (var pair in index)
         {
-            builder.Append(pair[0]);
+            builder.Append(pair.Key);
             builder.Append(' ');
-            builder.Append(pair[1]);
+            builder.Append(pair.Value);
             builder.Append(Environment.NewLine);
         }
 
@@ -163,15 +163,15 @@ internal sealed class SmartIndexer
             int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
     }
     
-    internal static async Task<List<string[]>> ReadIndex(string path)
+    internal static async Task<List<KeyValuePair<string, string>>> ReadIndex(string path)
     {
         var text = await File.ReadAllLinesAsync(path);
-        var index = new List<string[]>();
+        var index = new List<KeyValuePair<string, string>>();
 
         foreach (var line in text)
         {
             var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-            index.Add(new [] { line[..last], line[(last + 1)..] });
+            index.Add(new KeyValuePair<string, string>(line[..last], line[(last + 1)..]));
         }
 
         return index;

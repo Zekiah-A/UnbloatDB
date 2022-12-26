@@ -81,14 +81,14 @@ public sealed class Database
         }
 
         var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+        var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var convertedValue = SmartIndexer.FormatObject(value);
         
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<T>(index[position][1]);
+            var record = await GetRecord<T>(index[position].Value);
             if (record is not null)
             {
                 found.Add(record);
@@ -166,13 +166,18 @@ public sealed class Database
         }
 
         var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue[0]).ToArray<object>();
+        var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var position = 0;
 
-        while ((value as IComparable).CompareTo(values[position]) != -1)
+        if (value is not IComparable comparableValue)
         {
-            found.Add(await GetRecord<T>(index.ElementAt(position)[1]));
+            return found.ToArray();
+        }
+        
+        while (comparableValue.CompareTo(values[position]) != -1)
+        {
+            found.Add((await GetRecord<T>(index.ElementAt(position).Value))!);
             position++;
         }
 
