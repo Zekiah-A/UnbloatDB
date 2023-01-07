@@ -16,6 +16,7 @@ public static class Extensions
             Array.Copy(source, index + 1, dest, index, source.Length - index - 1);
         }
 
+        
         return dest;
     }
 }

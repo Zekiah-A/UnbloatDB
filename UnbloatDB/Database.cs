@@ -61,7 +61,7 @@ public sealed class Database
     
     /// <summary>
     /// Gets the first record from a supplied query property and value being searched for. For getting a record by it's
-    /// unique Master Key, please use GetRecord<T>(string masterKey) instead.
+    /// unique Master Key, please use GetRecord<T>(string masterKey) instead, otherwise, this method will not return any results.
     /// </summary>
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
@@ -141,6 +141,34 @@ public sealed class Database
         {
             File.Delete(recordPath);
         }
+    }
+
+    /// <summary>
+    /// Please only use this method for getting ALL records in a group, and returning only that. If you want to get all records
+    /// in a group, and then filter them down to select only those with a specific property, such as with linq. PLEASE use
+    /// "find records" instead, which will be able to make use of the smart indexer to run much faster.
+    /// </summary>
+    /// <typeparam name="T">Record group we are retrieving all for.</typeparam>
+    /// <returns>All records contained within the specified group.</returns>
+    public async Task<RecordStructure<T>[]> GetAllRecords<T>() where T : notnull
+    {
+        var group = typeof(T).Name;
+        var path = Path.Join(configuration.DataDirectory, group);
+
+        var found = new List<RecordStructure<T>>();
+        
+        if (!Directory.Exists(path))
+        {
+            return found.ToArray();
+        }
+
+        foreach (var recordPath in Directory.GetFiles(path))
+        {
+            await using var openStream = File.OpenRead(recordPath);
+            found.Add(await configuration.FileFormat.Deserialise<RecordStructure<T>>(openStream));
+        }
+
+        return found.ToArray();
     }
     
     /// <summary>
