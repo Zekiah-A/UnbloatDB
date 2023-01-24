@@ -7,10 +7,13 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
+    private Dictionary<string, FileStream> indexerStreams;
     
     public SmartIndexer(Config config)
     {
         configuration = config;
+
+        AppDomain.CurrentDomain.ProcessExit += CloseAllStreams;
     }
 
     /// <summary>
@@ -142,6 +145,17 @@ internal sealed class SmartIndexer
         }
     }
 
+    internal void CloseAllStreams(object? sender, EventArgs eventArgs)
+    {
+        foreach (var stream in indexerStreams)
+        {
+            stream.Flush();
+            stream.Close();
+        }
+
+        indexerStreams.Clear();
+    }
+
     private static string BuildIndex(in List<KeyValuePair<string, string>> index)
     {
         var builder = new StringBuilder();
@@ -166,12 +180,14 @@ internal sealed class SmartIndexer
     internal static async Task<List<KeyValuePair<string, string>>> ReadIndex(string path)
     {
         var text = await File.ReadAllLinesAsync(path);
+        indexerStreams.Add(path, File.OpenRead(path));
+        
         var index = new List<KeyValuePair<string, string>>();
 
         foreach (var line in text)
         {
-            var last = line.LastIndexOf(" ", StringComparison.Ordinal);
-            index.Add(new KeyValuePair<string, string>(line[..last], line[(last + 1)..]));
+            var separator = line.IndexOf(' ', StringComparison.Ordinal);
+            index.Add(line[..separator], line[(separator + 1)..]);
         }
 
         return index;
