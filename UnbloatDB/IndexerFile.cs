@@ -56,7 +56,7 @@ public class IndexerFile: IDisposable
         foreach (var length in lengths)
         {
             // TODO: Customisable key length beforehand
-            var key = Encoding.UFT8.GetString(reader.ReadBytes(36));
+            var key = Encoding.UTF8.GetString(reader.ReadBytes(36));
             var value = Encoding.UTF8.GetString(reader.ReadBytes(length - 36));
             
             index.Add(new KeyValuePair<string, string>(key, value));
@@ -102,7 +102,7 @@ public class IndexerFile: IDisposable
 
     public void Remove(int index)
     {
-        using var reader = new StreamReader(Stream);
+        using var reader = new BinaryReader(Stream);
 
         //First get length of this record so we know how much to cut out
         reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
@@ -110,17 +110,19 @@ public class IndexerFile: IDisposable
 
         // Next we copy everything following record location backwards over the record to ovwewrite it
         reader.BaseStream.Seek(GetElementLocation(index) + recordLength, SeekOrigin.Begin);
-        var proceeding = new MemoryStream(reader.ReadToEnd());
+        var proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position))); // Read to end
 
         reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
-        proceeding.CopyTo(Stream)
-
+        proceeding.CopyTo(Stream);
+        reader.BaseStream.SetLength(reader.BaseStream.Position);
+    
         // Next, jump back up and shift over this record length from the header of the indexer
         reader.BaseStream.Seek(GetHeaderLocation(index) + 4, SeekOrigin.Begin);
-        proceeding = new MemoryStream(reader.ReadToEnd());
+        proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position)));
+        reader.BaseStream.SetLength(reader.BaseStream.Position);
 
         reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
-        proceeding.CopyTo(Stream)
+        proceeding.CopyTo(Stream);
 
         Index.RemoveAt(index);
     }

@@ -16,8 +16,10 @@ internal sealed class SmartIndexer
         {
             foreach (var indexer in indexers)
             {
-                indexer.Dispose();
+                indexer.Value.Dispose();
             }
+            
+            indexers.Clear();
         };
     }
 
