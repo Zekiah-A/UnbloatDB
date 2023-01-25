@@ -1,8 +1,10 @@
+using System;
 using System.Text;
+using System.ComponentModel;
 
 namespace UnbloatDB;
 
-public class IndexerFile
+public class IndexerFile: IDisposable
 {
     public FileStream Stream;
     public string Path;
@@ -23,8 +25,9 @@ public class IndexerFile
         }
     }
     
-    public List<KeyValuePair<string, string>> Index;
-
+    public List<KeyValuePair<string, string>> Index { get; private set; }
+    private bool disposed;
+    
     public IndexerFile(string fromFile)
     {
         Path = fromFile;
@@ -49,10 +52,12 @@ public class IndexerFile
             lengths.Add((int) reader.ReadUInt32());
         }
         
+        // Now that we have read past header, we should be in the main record body
         foreach (var length in lengths)
         {
-            var key = reader.ReadString();
-            var value = reader.ReadString();
+            // TODO: Customisable key length beforehand
+            var key = Encoding.UFT8.GetString(reader.ReadBytes(36));
+            var value = Encoding.UTF8.GetString(reader.ReadBytes(length - 36));
             
             index.Add(new KeyValuePair<string, string>(key, value));
         }
@@ -97,16 +102,27 @@ public class IndexerFile
 
     public void Remove(int index)
     {
-        //TODO: Use Buffer.BlockCopy to avoid constructing a new indexer
-        
-        // First write the record key - value to the right location in the file
-        //GetElementLocation(index), SeekOrigin.Begin
+        using var reader = new StreamReader(Stream);
 
-        // Next, jump back up and append our new changes to the header of the file
-        //GetHeaderLocation(index), SeekOrigin.Begin
+        //First get length of this record so we know how much to cut out
+        reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
+        var recordLength = reader.ReadUInt32();
+
+        // Next we copy everything following record location backwards over the record to ovwewrite it
+        reader.BaseStream.Seek(GetElementLocation(index) + recordLength, SeekOrigin.Begin);
+        var proceeding = new MemoryStream(reader.ReadToEnd());
+
+        reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
+        proceeding.CopyTo(Stream)
+
+        // Next, jump back up and shift over this record length from the header of the indexer
+        reader.BaseStream.Seek(GetHeaderLocation(index) + 4, SeekOrigin.Begin);
+        proceeding = new MemoryStream(reader.ReadToEnd());
+
+        reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
+        proceeding.CopyTo(Stream)
 
         Index.RemoveAt(index);
-        Create();
     }
     
     private int GetElementLocation(int elementIndex)
@@ -128,5 +144,28 @@ public class IndexerFile
         var location = 4;
         location += headerIndex * 4;
         return location;
+    }
+
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            Stream.Flush();
+            Stream.Dispose();
+        }
+
+        disposed = true;
     }
 }

@@ -7,11 +7,18 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
-    
+    private Dictionary<string, IndexerFile> indexers;
+
     public SmartIndexer(Config config)
     {
         configuration = config;
-        // AppDomain.CurrentDomain.ProcessExit += CloseAllStreams;
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            foreach (var indexer in indexers)
+            {
+                indexer.Dispose();
+            }
+        };
     }
 
     /// <summary>
