@@ -80,15 +80,15 @@ public sealed class Database
             // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
         }
 
-        var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var convertedValue = SmartIndexer.FormatObject(value);
         
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<T>(index[position].Value);
+            var record = await GetRecord<T>(indexFile.Index[position].Value);
             if (record is not null)
             {
                 found.Add(record);
@@ -185,8 +185,8 @@ public sealed class Database
             // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
         }
 
-        var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var position = 0;
 
@@ -197,7 +197,7 @@ public sealed class Database
         
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            found.Add((await GetRecord<T>(index.ElementAt(position).Value))!);
+            found.Add((await GetRecord<T>(indexFile.Index.ElementAt(position).Value))!);
             position++;
         }
 
@@ -231,8 +231,8 @@ public sealed class Database
             // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
         }
 
-        var index = await SmartIndexer.ReadIndex(path);
-        var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var position = 0;
 
@@ -243,7 +243,7 @@ public sealed class Database
         
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            found.Add((await GetRecord<T>(index.ElementAt(position).Value))!);
+            found.Add((await GetRecord<T>(indexFile.Index.ElementAt(position).Value))!);
             position++;
         }
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using UnbloatDB.Attributes;
 
@@ -7,19 +8,20 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
-    private Dictionary<string, IndexerFile> indexers;
+    public Dictionary<string, IndexerFile> Indexers { get; set; }
 
     public SmartIndexer(Config config)
     {
         configuration = config;
+        Indexers = new Dictionary<string, IndexerFile>();
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
-            foreach (var indexer in indexers)
+            foreach (var indexer in Indexers)
             {
                 indexer.Value.Dispose();
             }
             
-            indexers.Clear();
+            Indexers.Clear();
         };
     }
 
@@ -35,7 +37,7 @@ internal sealed class SmartIndexer
         Directory.CreateDirectory(path);
         
         //Populate index directory with appropiate index files
-        foreach (var property in typeof(T).GetProperties())
+        /*foreach (var property in typeof(T).GetProperties())
         {
             //TODO: Make this only index primitive types for now
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
@@ -44,7 +46,7 @@ internal sealed class SmartIndexer
             }
 
             await File.WriteAllTextAsync(Path.Join(path, property.Name), "");
-        }
+        }*/
     }
     
     public async Task RegenerateAllIndexes()
@@ -81,8 +83,8 @@ internal sealed class SmartIndexer
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
             }
 
-            var index = await ReadIndex(indexPath);
-            var keys = index.Select(keyValue => keyValue.Value).ToArray();
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
+            var keys = indexFile.Index.Select(keyValue => keyValue.Value).ToArray();
             var found = Array.IndexOf(keys, record.MasterKey);
 
             if (found == -1)
@@ -90,8 +92,7 @@ internal sealed class SmartIndexer
                 continue;
             }
             
-            index.RemoveAt(found);
-            await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+            indexFile.Remove(found);
         }
     }
 
@@ -124,8 +125,8 @@ internal sealed class SmartIndexer
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
             }
 
-            var index = await ReadIndex(indexPath);
-            var values = index.Select(keyValue => keyValue.Key).ToArray<object>();
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
+            var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
             var propertyValue = property.GetValue(record.Data);
 
             //TODO: Do not index null values for now, way to handle such cases must be found later
@@ -141,50 +142,26 @@ internal sealed class SmartIndexer
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
-                index.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
-                await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+                indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
                 continue;
             }
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            index.Add(new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
-            await File.WriteAllTextAsync(indexPath, BuildIndex(in index));
+            indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
         }
     }
     
-    private static string BuildIndex(in List<KeyValuePair<string, string>> index)
-    {
-        var builder = new StringBuilder();
-        foreach (var pair in index)
-        {
-            builder.Append(pair.Key);
-            builder.Append(' ');
-            builder.Append(pair.Value);
-            builder.Append(Environment.NewLine);
-        }
-
-        return builder.ToString();
-    }
-
     internal static object FormatObject<T>(T value) where T : notnull
     {
         return (value.GetType().IsEnum ?
             Convert.ChangeType(value, typeof(int)).ToString() :
             int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
     }
-    
-    internal static async Task<List<KeyValuePair<string, string>>> ReadIndex(string path)
+
+    public IndexerFile OpenIndex(string path)
     {
-        var text = await File.ReadAllLinesAsync(path);
-        
-        var index = new List<KeyValuePair<string, string>>();
-
-        foreach (var line in text)
-        {
-            var separator = line.IndexOf(' ', StringComparison.Ordinal);
-            index.Add(new KeyValuePair<string, string>(line[..separator], line[(separator + 1)..]));
-        }
-
-        return index;
+        var indexer = new IndexerFile(path);
+        Indexers.Add(path, indexer);
+        return indexer;
     }
 }

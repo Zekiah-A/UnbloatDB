@@ -38,7 +38,6 @@ public class IndexerFile: IDisposable
             Create();
         }
         
-        
         // Populate this class with the data from the indexer file stream
         using var reader = new BinaryReader(Stream);
         reader.BaseStream.Seek(0, SeekOrigin.Begin);
@@ -47,7 +46,7 @@ public class IndexerFile: IDisposable
         var lengths = new List<int>();
         var index = new List<KeyValuePair<string, string>>();
 
-        for (var i = 0; i < headerLength - 4; i += 4)
+        for (var i = 4; i < headerLength; i += 4)
         {
             lengths.Add((int) reader.ReadUInt32());
         }
