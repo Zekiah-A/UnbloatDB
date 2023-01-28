@@ -119,10 +119,10 @@ internal sealed class SmartIndexer
             
             var indexPath = Path.Join(path, property.Name);
 
-            if (!File.Exists(indexPath))
+            /*if (!File.Exists(indexPath))
             {
                 throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
-            }
+            }*/
 
             var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
             var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();

@@ -32,7 +32,7 @@ public class IndexerFile: IDisposable
     public IndexerFile(string fromFile)
     {
         Path = fromFile;
-        Stream = new FileStream(fromFile, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+        Stream = new FileStream(fromFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         Index = new List<KeyValuePair<string, string>>();
 
         if (Stream.Length == 0)
