@@ -26,8 +26,8 @@ public sealed class Database
 
         if (!Directory.Exists(groupPath))
         {
-            Directory.CreateDirectory(groupPath); //Type template
-            await indexer.BuildGroupIndexDirectoryFor<T>();
+            Directory.CreateDirectory(groupPath);
+            indexer.BuildGroupIndexDirectoryFor<T>();
         }
         
         var serialisedRecord = await configuration.FileFormat.Serialise(structuredRecord);

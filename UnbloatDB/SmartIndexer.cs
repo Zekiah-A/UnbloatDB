@@ -29,24 +29,23 @@ internal sealed class SmartIndexer
     /// Creates the indexer directory, used for storing record indexes of a group
     /// </summary>
     /// <typeparam name="T">The type of record being stored within this group, so that the appropriate index files can be created.</typeparam>
-    public async Task BuildGroupIndexDirectoryFor<T>()
+    public void BuildGroupIndexDirectoryFor<T>()
     {
         var path = Path.Join(configuration.DataDirectory, typeof(T).Name, configuration.IndexerDirectory);
         
         //Create index directory in template's group
         Directory.CreateDirectory(path);
         
-        //Populate index directory with appropiate index files
-        /*foreach (var property in typeof(T).GetProperties())
+        //Populate index directory with appropriate index files
+        foreach (var property in typeof(T).GetProperties())
         {
-            //TODO: Make this only index primitive types for now
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
             }
-
-            await File.WriteAllTextAsync(Path.Join(path, property.Name), "");
-        }*/
+            
+            OpenIndex(Path.Join(path, property.Name));
+        }
     }
     
     public async Task RegenerateAllIndexes()
