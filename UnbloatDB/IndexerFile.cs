@@ -15,13 +15,11 @@ public class IndexerFile: IDisposable
         {
             // We include the size (uint) of the header length at the file start too
             var count = 4;
-
             foreach (var pair in Index)
             {
-                count += pair.Key.Length * 4;
-                count += ((string) SmartIndexer.FormatObject(pair.Value)).Length * 4;
+                count += Encoding.UTF8.GetByteCount(pair.Key);
+                count += Encoding.UTF8.GetByteCount(pair.Value);
             }
-
             return count;
         }
     }
@@ -32,7 +30,7 @@ public class IndexerFile: IDisposable
     public IndexerFile(string fromFile)
     {
         Path = fromFile;
-        Stream = new FileStream(fromFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        Stream = new FileStream(fromFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         Index = new List<KeyValuePair<string, string>>();
 
         if (Stream.Length == 0)
@@ -41,7 +39,7 @@ public class IndexerFile: IDisposable
         }
         
         // Populate this class with the data from the indexer file stream
-        using var reader = new BinaryReader(Stream);
+        using var reader = new BinaryReader(Stream, Encoding.Default, true);
         reader.BaseStream.Seek(0, SeekOrigin.Begin);
 
         var headerLength = reader.ReadUInt32();
@@ -68,14 +66,16 @@ public class IndexerFile: IDisposable
         
     private void Create()
     {
-        using var writer = new BinaryWriter(Stream);
+        Stream.SetLength(0);
+        using var writer = new BinaryWriter(Stream, Encoding.Default, true);
         writer.Seek(0, SeekOrigin.Begin);
         writer.Write((uint) HeaderLength);
-        
+
         // Uint = 4 bytes, write each key value pair length as a uint  
         foreach (var entry in Index)
         {
-            writer.Write(entry.Key.Length * 4 + entry.Value.Length * 4);
+            writer.Flush();
+            writer.Write((uint) (Encoding.UTF8.GetByteCount(entry.Key) + Encoding.UTF8.GetByteCount(entry.Value)));
         }
 
         foreach (var entry in Index)
@@ -83,36 +83,45 @@ public class IndexerFile: IDisposable
             writer.Write(Encoding.UTF8.GetBytes(entry.Key));
             writer.Write(Encoding.UTF8.GetBytes(entry.Value));
         }
+        
+        // Update header length
+        writer.Seek(0, SeekOrigin.Begin);
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
     }
 
     public void Insert(int index, KeyValuePair<string, string> pair)
     {
-        using var writer = new BinaryWriter(Stream);
+        using var writer = new BinaryWriter(Stream, Encoding.Default, true);
 
         // First write the record key - value to the right location in the file
         writer.Seek(GetElementLocation(index), SeekOrigin.Begin);
         writer.Write(Encoding.UTF8.GetBytes(pair.Key));
         writer.Write(Encoding.UTF8.GetBytes(pair.Value));
-        
+    
         // Next, jump back up and append our new changes to the header of the file
         writer.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
-        writer.Write(pair.Key.Length * 4 + pair.Value.Length * 4);
+        writer.Write((uint) (Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value)));
+
+        // Update header length
+        writer.Seek(0, SeekOrigin.Begin);
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
 
         Index.Insert(index, pair);
     }
 
     public void Remove(int index)
     {
-        using var reader = new BinaryReader(Stream);
+        using var reader = new BinaryReader(Stream, Encoding.Default, true);
 
         //First get length of this record so we know how much to cut out
-        reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
+        reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
         var recordLength = reader.ReadUInt32();
 
-        // Next we copy everything following record location backwards over the record to overwrite it
+        // Next we copy everything following record location
         reader.BaseStream.Seek(GetElementLocation(index) + recordLength, SeekOrigin.Begin);
-        var proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position))); // Read to end
+        var proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position)));
 
+        // Then jump back to just before the record to insert preceding before it, cutting the duplicated data at the end
         reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
         proceeding.CopyTo(Stream);
         reader.BaseStream.SetLength(reader.BaseStream.Position);
@@ -124,6 +133,11 @@ public class IndexerFile: IDisposable
 
         reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
         proceeding.CopyTo(Stream);
+        
+        // Update header length
+        using var writer = new BinaryWriter(Stream, Encoding.Default, true);
+        writer.Seek(0, SeekOrigin.Begin);
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
 
         Index.RemoveAt(index);
     }
@@ -135,8 +149,8 @@ public class IndexerFile: IDisposable
         
         for (var i = 0; i < elementIndex; i++)
         {
-            location += Index[i].Key.Length * 4;
-            location += Index[i].Value.Length * 4;
+            location += Encoding.UTF8.GetByteCount(Index[i].Key);
+            location += Encoding.UTF8.GetByteCount(Index[i].Value);
         }
 
         return location;
@@ -145,7 +159,7 @@ public class IndexerFile: IDisposable
     private int GetHeaderLocation(int headerIndex)
     {
         var location = 4;
-        location += headerIndex * 4;
+        location += headerIndex * 4; // uint length
         return location;
     }
 

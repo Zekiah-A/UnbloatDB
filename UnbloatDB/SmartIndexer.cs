@@ -14,15 +14,14 @@ internal sealed class SmartIndexer
     {
         configuration = config;
         Indexers = new Dictionary<string, IndexerFile>();
-        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        
+        /*AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
             foreach (var indexer in Indexers)
             {
                 indexer.Value.Dispose();
             }
-            
-            Indexers.Clear();
-        };
+        };*/
     }
 
     /// <summary>
