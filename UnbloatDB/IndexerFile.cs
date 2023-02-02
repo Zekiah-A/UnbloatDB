@@ -74,7 +74,6 @@ public class IndexerFile: IDisposable
         // Uint = 4 bytes, write each key value pair length as a uint  
         foreach (var entry in Index)
         {
-            writer.Flush();
             writer.Write((uint) (Encoding.UTF8.GetByteCount(entry.Key) + Encoding.UTF8.GetByteCount(entry.Value)));
         }
 

@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnbloatDB.Attributes;
+using UnbloatDB.Keys;
 
 namespace UnbloatDB;
 
@@ -117,22 +119,22 @@ internal sealed class SmartIndexer
             }
             
             var indexPath = Path.Join(path, property.Name);
-
-            /*if (!File.Exists(indexPath))
-            {
-                throw new Exception("Could not find indexer file for property " + property.Name + " in " + path);
-            }*/
-
             var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
             var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
             var propertyValue = property.GetValue(record.Data);
 
-            //TODO: Do not index null values for now, way to handle such cases must be found later
+            // Do not index null values for now, way to handle such cases must be found later
             if (propertyValue is null)
             {
                 continue;
             }
-
+            
+            // Do not index collection types, do not follow database normalisation rules
+            if (IsEnumerable(property.GetType()))
+            {
+                continue;
+            }
+            
             if (values is { Length: > 0 })
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
@@ -148,6 +150,13 @@ internal sealed class SmartIndexer
             indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
         }
     }
+    
+    internal static bool IsEnumerable(Type type)
+    {
+        return type.Name != nameof(String) 
+                && type.GetInterface(nameof(IEnumerable)) != null;
+    }
+
     
     internal static object FormatObject<T>(T value) where T : notnull
     {

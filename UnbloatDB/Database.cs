@@ -170,6 +170,15 @@ public sealed class Database
 
         return found.ToArray();
     }
+    
+    public async Task<RecordStructure<T>[]> GetReferencers<T>()
+    {
+        var found = new List<RecordStructure<T>>();
+
+        // TODO: THIS
+        
+        return found.ToArray();
+    }
 
     public async Task<RecordStructure<T>[]> FindRecordsAfter<T, U>(string byProperty, U value, bool descending = false) where T : notnull where U : notnull
     {
