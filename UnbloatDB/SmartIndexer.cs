@@ -10,20 +10,15 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Config configuration;
+    private readonly Database database;
     public Dictionary<string, IndexerFile> Indexers { get; set; }
 
-    public SmartIndexer(Config config)
+    public SmartIndexer(Config config, Database db)
     {
-        configuration = config;
         Indexers = new Dictionary<string, IndexerFile>();
-        
-        /*AppDomain.CurrentDomain.ProcessExit += (_, _) =>
-        {
-            foreach (var indexer in Indexers)
-            {
-                indexer.Value.Dispose();
-            }
-        };*/
+
+        configuration = config;
+        database = db;
     }
 
     /// <summary>
@@ -113,11 +108,12 @@ internal sealed class SmartIndexer
         
         foreach (var property in typeof(T).GetProperties())
         {
-            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
+            // Do not index collection types, do not follow database normalisation rules
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.GetType()))
             {
                 continue;
             }
-            
+
             var indexPath = Path.Join(path, property.Name);
             var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
             var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
@@ -128,13 +124,7 @@ internal sealed class SmartIndexer
             {
                 continue;
             }
-            
-            // Do not index collection types, do not follow database normalisation rules
-            if (IsEnumerable(property.GetType()))
-            {
-                continue;
-            }
-            
+
             if (values is { Length: > 0 })
             {
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
@@ -148,15 +138,42 @@ internal sealed class SmartIndexer
             
             // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
             indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
+
+            // If it's a key reference, we update the "references" field of that record
+            if (property.GetType().GetGenericTypeDefinition() == typeof(KeyReferenceBase<>))
+            {
+                // Now we know the group of the record we are targeting, and key, we can update the target records'
+                // references to include a reference back to this.
+                var targetType = property.GetType().GetGenericArguments()[0];
+                
+                // TODO: Try to avoid dynamic, is always typeof RecordStructure<targetType>
+                var targetRecord = (dynamic) typeof(Database).GetMethod(nameof(Database.GetRecord))!
+                    .Invoke(database, new object?[] {propertyValue.ToString()})!;
+
+                // If we are in the same group (the target reference and record have the same generic type), then we use
+                // an IntraKey, otherwise we can utilise an Interkey.
+                if (targetType == targetRecord.GetType().GetGenericArguments()[0])
+                {
+                    var selfReference = new PropertyIntraKeyReference<T>(property.Name, record.MasterKey);
+                    targetRecord.KeyReferencors.Add(selfReference);
+                }
+                else
+                {
+                    var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, nameof(T));
+                    targetRecord.KeyReferencors.Add(selfReference);
+                }
+                
+                // Update the target record with the reference to this.
+                typeof(Database).GetMethod(nameof(Database.UpdateRecord))!.Invoke(database, targetRecord);
+            }
         }
     }
-    
-    internal static bool IsEnumerable(Type type)
+
+    private static bool IsEnumerable(Type type)
     {
         return type.Name != nameof(String) 
                 && type.GetInterface(nameof(IEnumerable)) != null;
     }
-
     
     internal static object FormatObject<T>(T value) where T : notnull
     {

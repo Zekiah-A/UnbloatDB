@@ -1,3 +1,3 @@
 namespace UnbloatDB.Keys;
 
-public sealed record InterKey<T>(string RecordKey) : KeyReferenceBase<T>(RecordKey);
+public record InterKeyReference<T>(string RecordKey, string Group) : KeyReferenceBase<T>(RecordKey);

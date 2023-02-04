@@ -8,7 +8,7 @@ public sealed class Database
     public Database(Config config)
     {
         configuration = config;
-        indexer = new SmartIndexer(configuration);
+        indexer = new SmartIndexer(configuration, this);
     }
 
     /// <summary>
