@@ -155,12 +155,12 @@ internal sealed class SmartIndexer
                 if (targetType == targetRecord.GetType().GetGenericArguments()[0])
                 {
                     var selfReference = new PropertyIntraKeyReference<T>(property.Name, record.MasterKey);
-                    targetRecord.KeyReferencors.Add(selfReference);
+                    targetRecord.KeyReferencers.Add(selfReference);
                 }
                 else
                 {
                     var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, nameof(T));
-                    targetRecord.KeyReferencors.Add(selfReference);
+                    targetRecord.KeyReferencers.Add(selfReference);
                 }
                 
                 // Update the target record with the reference to this.

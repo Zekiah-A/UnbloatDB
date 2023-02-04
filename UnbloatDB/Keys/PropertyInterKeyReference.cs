@@ -1,6 +1,6 @@
 namespace UnbloatDB.Keys;
 
-public record PropertyInterKeyReference<T>
+internal record PropertyInterKeyReference<T>
 (
     string Property,
     string RecordKey,
