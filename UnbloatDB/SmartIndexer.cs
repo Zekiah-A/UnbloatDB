@@ -9,15 +9,15 @@ namespace UnbloatDB;
 
 internal sealed class SmartIndexer
 {
-    private readonly Config configuration;
+    private readonly Configuration configuration;
     private readonly Database database;
     public Dictionary<string, IndexerFile> Indexers { get; set; }
 
-    public SmartIndexer(Config config, Database db)
+    public SmartIndexer(Configuration configuration, Database db)
     {
         Indexers = new Dictionary<string, IndexerFile>();
 
-        configuration = config;
+        this.configuration = configuration;
         database = db;
     }
 
@@ -44,11 +44,6 @@ internal sealed class SmartIndexer
         }
     }
     
-    public async Task RegenerateAllIndexes()
-    {
-        //To-do
-    }
-
     /// <summary>
     /// Removes each property of a record structure from the record indexer
     /// </summary>
@@ -61,16 +56,17 @@ internal sealed class SmartIndexer
         // If there is no indexer directory for this group, then regenerate all indexes for this group.
         if (!Directory.Exists(path))
         {
-            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " + path);
+            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " +
+                                path);
         }
-        
+
         foreach (var property in typeof(T).GetProperties())
         {
             if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)))
             {
                 continue;
             }
-            
+
             var indexPath = Path.Join(path, property.Name);
 
             if (!File.Exists(indexPath))
@@ -86,7 +82,7 @@ internal sealed class SmartIndexer
             {
                 continue;
             }
-            
+
             indexFile.Remove(found);
         }
     }
@@ -132,39 +128,54 @@ internal sealed class SmartIndexer
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
-                indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
-                continue;
+                indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex,
+                    new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
+            }
+            else
+            {
+                // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
+                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
             }
             
-            // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-            indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
 
             // If it's a key reference, we update the "references" field of that record
-            if (property.GetType().GetGenericTypeDefinition() == typeof(KeyReferenceBase<>))
+            // TODO: Weird bug, checking equality always returns false, so for now we just do a comparison on the string names.
+            // TODO: https://stackoverflow.com/questions/59213561/why-does-type-equals-always-returns-false-with-generic-types
+            if (property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition().BaseType!.Name == typeof(KeyReferenceBase<>).Name)
             {
                 // Now we know the group of the record we are targeting, and key, we can update the target records'
                 // references to include a reference back to this.
-                var targetType = property.GetType().GetGenericArguments()[0];
+                var targetType = property.PropertyType.GetGenericArguments()[0];
+
+                // Get the record key of the target so that we can get their record from the DB.
+                var targetKey = propertyValue.GetType().GetProperty("RecordKey")!.GetValue(propertyValue)!;
                 
-                // TODO: Try to avoid dynamic, is always typeof RecordStructure<targetType>
-                var targetRecord = (dynamic) typeof(Database).GetMethod(nameof(Database.GetRecord))!
-                    .Invoke(database, new object?[] {propertyValue.ToString()})!;
+                // We magically create a generic method at runtime for handling this target type and retrieve the
+                // referenced database record.
+                var targetRecord = await typeof(Database).GetMethod(nameof(Database.GetRecord))!
+                    .MakeGenericMethod(targetType).InvokeAsync(database, targetKey);
 
                 // If we are in the same group (the target reference and record have the same generic type), then we use
                 // an IntraKey, otherwise we can utilise an Interkey.
-                if (targetType == targetRecord.GetType().GetGenericArguments()[0])
+                if (targetType == typeof(T))
                 {
+                    // This reflection abomination will attempt to call the list add method on the record to add this referencer.
                     var selfReference = new PropertyIntraKeyReference<T>(property.Name, record.MasterKey);
-                    targetRecord.KeyReferencers.Add(selfReference);
+                    targetRecord.GetType().GetProperty("Referencers")!
+                        .PropertyType.GetMethod("Add")!
+                        .Invoke(targetRecord, new object[] { selfReference });
                 }
                 else
                 {
-                    var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, nameof(T));
-                    targetRecord.KeyReferencers.Add(selfReference);
+                    var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, typeof(T).Name);
+                    targetRecord.GetType().GetProperty("Referencers")!
+                        .PropertyType.GetMethod("Add")!
+                        .Invoke(targetRecord, new object[] { selfReference });
                 }
                 
                 // Update the target record with the reference to this.
-                typeof(Database).GetMethod(nameof(Database.UpdateRecord))!.Invoke(database, targetRecord);
+                await typeof(Database).GetMethod(nameof(Database.UpdateRecord))!
+                    .MakeGenericMethod(targetType).InvokeAsync(database, targetRecord);
             }
         }
     }

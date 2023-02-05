@@ -1,5 +1,6 @@
 using System.Globalization;
 using UnbloatDB;
+using UnbloatDB.Keys;
 using UnbloatDB.Records;
 using UnbloatDB.Tests.Types;
 
@@ -29,14 +30,16 @@ internal sealed class CreateTest
                 (Gender) Random.Next(3)
             );
 
+            var artistKey = await Db.CreateRecord(artist);
+
             var song = new Song
             (
                 Random.Next(0, 1000).ToString(),
                 (Genre) Random.Next(4),
-                new DateTime().AddDays(Random.Next(0, 10000)).ToString(CultureInfo.InvariantCulture)
+                new DateTime().AddDays(Random.Next(0, 10000)).ToString(CultureInfo.InvariantCulture),
+                new IntraKeyReference<Artist>(artistKey)
             );
 
-            await Db.CreateRecord(artist);
             await Db.CreateRecord(song);
         }
         

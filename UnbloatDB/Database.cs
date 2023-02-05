@@ -2,13 +2,13 @@ namespace UnbloatDB;
 
 public sealed class Database
 {
-    private readonly Config configuration;
+    private readonly Configuration configuration;
     private readonly SmartIndexer indexer;
 
-    public Database(Config config)
+    public Database(Configuration configuration)
     {
-        configuration = config;
-        indexer = new SmartIndexer(configuration, this);
+        this.configuration = configuration;
+        indexer = new SmartIndexer(this.configuration, this);
     }
 
     /// <summary>

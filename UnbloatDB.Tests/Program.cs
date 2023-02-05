@@ -5,7 +5,7 @@ using UnbloatDB.Tests;
 // We test with each serialiser, in order to ensure each work equally.
 var databases = new List<Database>
 {
-    new(new Config("json", new JsonSerialiser())),
+    new(new Configuration("json", new JsonSerialiser())),
     //new(new Config("yaml", new YamlSerialiser()))
 };
 
