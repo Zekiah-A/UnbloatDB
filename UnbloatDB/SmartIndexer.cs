@@ -161,16 +161,16 @@ internal sealed class SmartIndexer
                 {
                     // This reflection abomination will attempt to call the list add method on the record to add this referencer.
                     var selfReference = new PropertyIntraKeyReference<T>(property.Name, record.MasterKey);
-                    targetRecord.GetType().GetProperty("Referencers")!
-                        .PropertyType.GetMethod("Add")!
-                        .Invoke(targetRecord, new object[] { selfReference });
+                    var referencersProperty = targetRecord.GetType().GetProperty("Referencers")!;
+                    referencersProperty.PropertyType.GetMethod("Add")!
+                        .Invoke(referencersProperty.GetValue(targetRecord), new object[] { selfReference });
                 }
                 else
                 {
                     var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, typeof(T).Name);
-                    targetRecord.GetType().GetProperty("Referencers")!
-                        .PropertyType.GetMethod("Add")!
-                        .Invoke(targetRecord, new object[] { selfReference });
+                    var referencersProperty = targetRecord.GetType().GetProperty("Referencers")!;
+                    referencersProperty.PropertyType.GetMethod("Add")!
+                        .Invoke(referencersProperty.GetValue(targetRecord), new object[] { selfReference });
                 }
                 
                 // Update the target record with the reference to this.
