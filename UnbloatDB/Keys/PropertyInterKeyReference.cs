@@ -1,8 +1,8 @@
 namespace UnbloatDB.Keys;
 
-internal record PropertyInterKeyReference<T>
+public record PropertyInterKeyReference<T>
 (
     string Property,
     string RecordKey,
     string Group
-) : InterKeyReference<T>(RecordKey, Group);
+) : PropertyKeyReferenceBase(Property, RecordKey);

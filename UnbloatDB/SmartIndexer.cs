@@ -1,7 +1,4 @@
 using System.Collections;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using UnbloatDB.Attributes;
 using UnbloatDB.Keys;
 
@@ -12,6 +9,14 @@ internal sealed class SmartIndexer
     private readonly Configuration configuration;
     private readonly Database database;
     public Dictionary<string, IndexerFile> Indexers { get; set; }
+    
+    private static readonly HashSet<Type> NumberTypes = new()
+    {
+        typeof(int),  typeof(double),  typeof(decimal),
+        typeof(long), typeof(short),   typeof(sbyte),
+        typeof(byte), typeof(ulong),   typeof(ushort),  
+        typeof(uint), typeof(float)
+    };
 
     public SmartIndexer(Configuration configuration, Database db)
     {
@@ -148,8 +153,9 @@ internal sealed class SmartIndexer
                 var targetType = property.PropertyType.GetGenericArguments()[0];
 
                 // Get the record key of the target so that we can get their record from the DB.
+                // propertyValue: IntraKeyReference, targetKey: string. 
                 var targetKey = propertyValue.GetType().GetProperty("RecordKey")!.GetValue(propertyValue)!;
-                
+
                 // We magically create a generic method at runtime for handling this target type and retrieve the
                 // referenced database record.
                 var targetRecord = await typeof(Database).GetMethod(nameof(Database.GetRecord))!
@@ -188,11 +194,14 @@ internal sealed class SmartIndexer
     
     internal static object FormatObject<T>(T value) where T : notnull
     {
-        return (value.GetType().IsEnum ?
-            Convert.ChangeType(value, typeof(int)).ToString() :
-            int.TryParse(value.ToString(), out _) ? value.ToString() : value)!;
-    }
+        if (typeof(T).IsEnum)
+            return Convert.ChangeType(value, typeof(int)).ToString()!;
+        if (typeof(T).Name == typeof(KeyReferenceBase<>).Name)
+            return (string) value.GetType().GetProperty("RecordKey")!.GetValue(value)!;
 
+        return NumberTypes.Contains(typeof(T)) ? value : value.ToString()!;
+    }
+    
     public IndexerFile OpenIndex(string path)
     {
         var indexer = new IndexerFile(path);

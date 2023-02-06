@@ -3,7 +3,21 @@ using UnbloatDB.Keys;
 
 namespace UnbloatDB;
 
-public sealed record RecordStructure<T>(string MasterKey, T Data) where T : notnull
+public sealed class RecordStructure<T> where T : notnull
 {
-    public List<IKeyReferenceBase> Referencers { get; set; } = new();
+    public string MasterKey { get; }
+    public T Data { get; set; }
+    
+    public RecordStructure()
+    {
+        // Some serialisers require parameterless constructor
+    }
+
+    public RecordStructure(string masterKey, T data)
+    {
+        MasterKey = masterKey;
+        Data = data;
+    }
+    
+    public List<PropertyKeyReferenceBase> Referencers { get; set; } = new();
 }

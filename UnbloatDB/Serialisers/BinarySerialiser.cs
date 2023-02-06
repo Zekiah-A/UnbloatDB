@@ -1,3 +1,4 @@
+// TODO: Find a way to integrate this
 /*
 using BinaryPack;
 
@@ -9,14 +10,14 @@ public class BinarySerializer : SerialiserBase
     {
     }
 
-    public override Task<string> Serialise<T>(T instance)
+    public override ValueTask<string> Serialise<T>(T instance)
     {
-        //return Task.FromResult(BinaryConverter.Serialize(instance));
+        return Task.FromResult(BinaryConverter.Serialize(instance));
     }
-
-    public override Task<T> Deserialise<T>(Stream data)
+    
+    public override ValueTask<T> Deserialise<T>(Stream data)
     {
-        //return Task.FromResult(BinaryConverter.Deserialize<T>(data));
+        return Task.FromResult(BinaryConverter.Deserialize<T>(data));
     }
 }
 */

@@ -1,6 +1,6 @@
 namespace UnbloatDB.Tests.Types;
 
-internal enum Genre
+public enum Genre
 {
     Pop,
     Rock,

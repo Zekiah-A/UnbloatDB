@@ -1,6 +1,6 @@
 namespace UnbloatDB.Tests.Types;
 
-internal enum Gender
+public enum Gender
 {
     Male,
     Female,

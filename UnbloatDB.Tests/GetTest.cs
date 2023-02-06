@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UnbloatDB.Keys;
 using UnbloatDB.Records;
 using UnbloatDB.Tests.Types;
 
@@ -20,7 +21,12 @@ internal sealed class GetTest
         var masterKey = await Db.CreateRecord(expected);
 
         var result = await Db.GetRecord<Artist>(masterKey);
-        
+
+        /*if (result?.Referencers[1] is PropertyInterKeyReference<Song> songReference)
+        {
+            Console.WriteLine(songReference.RecordKey);
+        }*/
+
         return result is not null && result.Data.Equals(expected);
     }
 }

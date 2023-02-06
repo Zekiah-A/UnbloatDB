@@ -16,13 +16,13 @@ public sealed class JsonSerialiser : SerialiserBase
     {
     }
 
-    public override Task<string> Serialise<T>(T instance)
+    public override ValueTask<string> Serialise<T>(T instance)
     {
-        return Task.FromResult(JsonSerializer.Serialize(instance, Options));
+        return ValueTask.FromResult(JsonSerializer.Serialize(instance, Options));
     }
 
-    public override Task<T> Deserialise<T>(Stream data)
+    public override ValueTask<T> Deserialise<T>(Stream data)
     {
-        return Task.FromResult(JsonSerializer.Deserialize<T>(data));
+        return ValueTask.FromResult(JsonSerializer.Deserialize<T>(data));
     }
 }
