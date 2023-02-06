@@ -12,17 +12,17 @@ internal sealed class SmartIndexer
     
     private static readonly HashSet<Type> NumberTypes = new()
     {
-        typeof(int),  typeof(double),  typeof(decimal),
-        typeof(long), typeof(short),   typeof(sbyte),
-        typeof(byte), typeof(ulong),   typeof(ushort),  
+        typeof(int), typeof(double), typeof(decimal),
+        typeof(long), typeof(short), typeof(sbyte),
+        typeof(byte), typeof(ulong), typeof(ushort),  
         typeof(uint), typeof(float)
     };
 
-    public SmartIndexer(Configuration configuration, Database db)
+    public SmartIndexer(Configuration config, Database db)
     {
         Indexers = new Dictionary<string, IndexerFile>();
-
-        this.configuration = configuration;
+        
+        configuration = config;
         database = db;
     }
 
@@ -142,7 +142,6 @@ internal sealed class SmartIndexer
                 indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
             }
             
-
             // If it's a key reference, we update the "references" field of that record
             // TODO: Weird bug, checking equality always returns false, so for now we just do a comparison on the string names.
             // TODO: https://stackoverflow.com/questions/59213561/why-does-type-equals-always-returns-false-with-generic-types
@@ -158,8 +157,8 @@ internal sealed class SmartIndexer
 
                 // We magically create a generic method at runtime for handling this target type and retrieve the
                 // referenced database record.
-                var targetRecord = await typeof(Database).GetMethod(nameof(Database.GetRecord))!
-                    .MakeGenericMethod(targetType).InvokeAsync(database, targetKey);
+                var targetRecord = (await typeof(Database).GetMethod(nameof(Database.GetRecord))!
+                    .MakeGenericMethod(targetType).InvokeAsync(database, targetKey))!;
 
                 // If we are in the same group (the target reference and record have the same generic type), then we use
                 // an IntraKey, otherwise we can utilise an Interkey.
@@ -196,9 +195,7 @@ internal sealed class SmartIndexer
     {
         if (typeof(T).IsEnum)
             return Convert.ChangeType(value, typeof(int)).ToString()!;
-        if (typeof(T).Name == typeof(KeyReferenceBase<>).Name)
-            return (string) value.GetType().GetProperty("RecordKey")!.GetValue(value)!;
-
+        
         return NumberTypes.Contains(typeof(T)) ? value : value.ToString()!;
     }
     
