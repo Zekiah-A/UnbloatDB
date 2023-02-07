@@ -70,16 +70,7 @@ public sealed class Database
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
-
-        if (!File.Exists(path))
-        {
-            // TODO: File safety. 
-            // If this group doesn't even exist in the DB, fail.
-            // If the group does exist, but the property they are searching for does not in the record type, fail.
-            // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
-            // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
-        }
-
+        
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();

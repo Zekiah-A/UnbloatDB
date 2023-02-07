@@ -120,17 +120,16 @@ public class IndexerFile: IDisposable
 
     public void Remove(int index)
     {
-        /*
         using var reader = new BinaryReader(Stream, Encoding.Default, true);
 
         //First get length of this record so we know how much to cut out
-        reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
+        reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
         var recordLength = reader.ReadUInt32();
 
         // Next we copy everything following record location
         reader.BaseStream.Seek(GetElementLocation(index) + recordLength, SeekOrigin.Begin);
         var proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position)));
-
+        
         // Then jump back to just before the record to insert preceding before it, cutting the duplicated data at the end
         reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
         proceeding.CopyTo(Stream);
@@ -150,7 +149,6 @@ public class IndexerFile: IDisposable
         writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
 
         Index.RemoveAt(index);
-        */
     }
     
     private int GetElementLocation(int elementIndex)

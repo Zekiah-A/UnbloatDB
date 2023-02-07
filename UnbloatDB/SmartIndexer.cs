@@ -61,8 +61,7 @@ internal sealed class SmartIndexer
         // If there is no indexer directory for this group, then regenerate all indexes for this group.
         if (!Directory.Exists(path))
         {
-            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " +
-                                path);
+            throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " + path);
         }
 
         foreach (var property in typeof(T).GetProperties())
@@ -117,7 +116,6 @@ internal sealed class SmartIndexer
 
             var indexPath = Path.Join(path, property.Name);
             var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
-            var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
             var propertyValue = property.GetValue(record.Data);
 
             // Do not index null values for now, way to handle such cases must be found later
@@ -126,8 +124,10 @@ internal sealed class SmartIndexer
                 continue;
             }
 
-            if (values is { Length: > 0 })
+            if (indexFile.Index.Count > 0)
             {
+                var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
+                
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not already in the array, we analyse where it should go.
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
@@ -193,8 +193,10 @@ internal sealed class SmartIndexer
     
     internal static object FormatObject<T>(T value) where T : notnull
     {
-        if (typeof(T).IsEnum)
-            return Convert.ChangeType(value, typeof(int)).ToString()!;
+        if (typeof(T).BaseType is { IsEnum: true })
+        {
+            return Convert.ChangeType(value, typeof(int));
+        }
         
         return NumberTypes.Contains(typeof(T)) ? value : value.ToString()!;
     }

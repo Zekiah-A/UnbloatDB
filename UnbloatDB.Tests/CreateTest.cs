@@ -37,9 +37,9 @@ internal sealed class CreateTest
                 Random.Next(0, 1000).ToString(),
                 (Genre) Random.Next(4),
                 new DateTime().AddDays(Random.Next(0, 10000)).ToString(CultureInfo.InvariantCulture),
-                new IntraKeyReference<Artist>(artistKey)
+                new InterKeyReference<Artist>(artistKey)
             );
-
+            
             await Db.CreateRecord(song);
         }
         
