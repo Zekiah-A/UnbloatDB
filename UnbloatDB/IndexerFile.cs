@@ -46,8 +46,8 @@ public class IndexerFile: IDisposable
         var headerLength = reader.ReadUInt32();
         var lengths = new List<int>();
 
-        // HeaderLength includes length of header declaration
-        for (var i = 0; i < headerLength - 4; i += 4)
+        // HeaderLength includes length of total header length (first byte)
+        for (var i = 4; i < headerLength; i += 4)
         {
             lengths.Add((int) reader.ReadUInt32());
         }
@@ -67,7 +67,7 @@ public class IndexerFile: IDisposable
         Stream.SetLength(0);
         using var writer = new BinaryWriter(Stream, Encoding.Default, true);
         writer.Seek(0, SeekOrigin.Begin);
-        writer.Write((uint) HeaderLength);
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
         
         // Uint = 4 bytes, write each key value pair length as a uint  
         foreach (var entry in Index)
@@ -86,19 +86,35 @@ public class IndexerFile: IDisposable
     {
         using var writer = new BinaryWriter(Stream, Encoding.Default, true);
 
-        // First write the record key - value to the right location in the file
+        // First write the record key - value to the right location in the file (+ 4 because we will be inserting the length)
+        // of the record before this after.
         writer.Seek(GetElementLocation(index), SeekOrigin.Begin);
         writer.Write(Encoding.UTF8.GetBytes(pair.Key));
         writer.Write(Encoding.UTF8.GetBytes(pair.Value));
-    
-        // Next, jump back up and append our new changes to the header of the file
+        writer.Flush();
+        
+        // Next, jump back up and shift everything over by 4 bytes to make space for new header length entry.
+        using (var reader = new BinaryReader(Stream, Encoding.Default, true))
+        {
+            reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
+            var proceeding = new MemoryStream(reader.ReadBytes((int) (reader.BaseStream.Length - reader.BaseStream.Position)));
+            reader.BaseStream.Seek(GetHeaderLocation(index) + 4, SeekOrigin.Begin);
+            proceeding.CopyTo(Stream);
+            proceeding.Flush();
+            
+            reader.BaseStream.SetLength(reader.BaseStream.Position);
+        }
+        
+        // Append this record's length to our newly made space in the header of in the file
         writer.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
         writer.Write((uint) (Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value)));
-
-        // Update header length
-        writer.Seek(0, SeekOrigin.Begin);
-        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
-
+        writer.Flush();
+        
+        // Update header length (+4 because we just added another uint32 record length to header)
+        writer.Seek(0, SeekOrigin.Begin); 
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength + 4), 0, 4);
+        writer.Flush();
+        
         Index.Insert(index, pair);
     }
 
