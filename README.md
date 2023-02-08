@@ -6,7 +6,7 @@ This database is not supposed to be the biggest, most feature packed, or suitabl
 This is an example setup of an UnbloatDB instance.
 ```cs
 // Create the datatypes we went to save to the database
-public enum Gender
+enum Gender
 {
     Male,
     Female,
@@ -14,8 +14,9 @@ public enum Gender
     Unknown
 }
 
-internal sealed record Artist(int Age, string Location, Gender Gender);
-
+record Artist(int Age, string Location, Gender Gender);
+```
+```cs
 // Create an instance of UnbloatDB, using the folder "my_database_folder" to store the data.
 var database = new Database(new Configuration("my_database_folder", new JsonSerialiser()));
 
