@@ -15,7 +15,6 @@ public enum Gender
 }
 
 internal sealed record Artist(int Age, string Location, Gender Gender);
-...
 
 // Create an instance of UnbloatDB, using the folder "my_database_folder" to store the data.
 var database = new Database(new Configuration("my_database_folder", new JsonSerialiser()));
