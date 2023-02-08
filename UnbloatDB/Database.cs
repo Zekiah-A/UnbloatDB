@@ -5,10 +5,10 @@ public sealed class Database
     private readonly Configuration configuration;
     private readonly SmartIndexer indexer;
 
-    public Database(Configuration configuration)
+    public Database(Configuration config)
     {
-        this.configuration = configuration;
-        indexer = new SmartIndexer(this.configuration, this);
+        configuration = config;
+        indexer = new SmartIndexer(config, this);
     }
 
     /// <summary>
