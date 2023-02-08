@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace UnbloatDB;
@@ -133,6 +134,7 @@ public class IndexerFile: IDisposable
         // Then jump back to just before the record to insert preceding before it, cutting the duplicated data at the end
         reader.BaseStream.Seek(GetElementLocation(index), SeekOrigin.Begin);
         proceeding.CopyTo(Stream);
+        proceeding.Flush();
         reader.BaseStream.SetLength(reader.BaseStream.Position);
     
         // Next, jump back up and shift over this record length from the header of the indexer
@@ -142,12 +144,14 @@ public class IndexerFile: IDisposable
 
         reader.BaseStream.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
         proceeding.CopyTo(Stream);
+        proceeding.Flush();
         
-        // Update header length
+        // Update header length, (-4) because we just removed a 4 byte record length from the header 
         using var writer = new BinaryWriter(Stream, Encoding.Default, true);
         writer.Seek(0, SeekOrigin.Begin);
-        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
-
+        writer.Write(BitConverter.GetBytes((uint) HeaderLength - 4), 0, 4);
+        writer.Flush();
+        
         Index.RemoveAt(index);
     }
     
@@ -165,11 +169,10 @@ public class IndexerFile: IDisposable
         return location;
     }
 
-    private int GetHeaderLocation(int headerIndex)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int GetHeaderLocation(int headerIndex)
     {
-        var location = 4;
-        location += headerIndex * 4; // uint length
-        return location;
+        return headerIndex * 4 + 4;
     }
 
 

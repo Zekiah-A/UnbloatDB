@@ -89,6 +89,8 @@ internal sealed class SmartIndexer
 
             indexFile.Remove(found);
         }
+        
+        //TODO: Remove/edit referencers to notify them that record has been deleted
     }
 
     /// <summary>
@@ -188,7 +190,7 @@ internal sealed class SmartIndexer
     private static bool IsEnumerable(Type type)
     {
         return type.Name != nameof(String) 
-                && type.GetInterface(nameof(IEnumerable)) != null;
+            && type.GetInterface(nameof(IEnumerable)) != null;
     }
     
     internal static object FormatObject<T>(T value) where T : notnull
