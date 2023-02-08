@@ -17,7 +17,7 @@ internal sealed class DeleteTest
         var toDelete = new Artist(25, "Bradford", Gender.Male);
         var toDeleteKey = await Db.CreateRecord<Artist>(toDelete);
 
-        await Db.DeleteRecord(toDeleteKey);
+        await Db.DeleteRecord<Artist>(toDeleteKey);
 
         var result = await Db.GetRecord<Artist>(toDeleteKey);
         

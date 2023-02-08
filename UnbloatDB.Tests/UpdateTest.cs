@@ -15,10 +15,17 @@ internal sealed class UpdateTest
     public async Task<bool> RunTest()
     {
         var artist = new Artist(25, "Bradford", Gender.Male);
-        var artistKey = await Db.CreateRecord<Artist>(artist);
+        
+        var artistKey = await Db.CreateRecord(artist);
 
         var artistOriginal = await Db.GetRecord<Artist>(artistKey);
-        await Db.UpdateRecord(artistOriginal with { Data.Age = 26 });
+        if (artistOriginal is null)
+        {
+            return false;
+        }
+        
+        var updatedArtist = artist with { Age = 25 };
+        await Db.UpdateRecord(artistOriginal with { Data = updatedArtist });
         
         var result = await Db.GetRecord<Artist>(artistKey);
         return !result.Equals(artistOriginal);

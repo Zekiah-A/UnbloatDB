@@ -1,23 +1,20 @@
-using System.Collections;
 using UnbloatDB.Keys;
 
 namespace UnbloatDB;
 
-public sealed class RecordStructure<T> where T : notnull
+public sealed record RecordStructure<T> where T : notnull
 {
     public string MasterKey { get; }
     public T Data { get; set; }
-    
-    public RecordStructure()
-    {
-        // Some serialisers require parameterless constructor
-    }
+    public List<PropertyKeyReferenceBase> Referencers { get; set; }
+
+    // Some serialisers require parameterless constructor
+    public RecordStructure() { }
 
     public RecordStructure(string masterKey, T data)
     {
         MasterKey = masterKey;
         Data = data;
+        Referencers = new List<PropertyKeyReferenceBase>();
     }
-    
-    public List<PropertyKeyReferenceBase> Referencers { get; set; } = new();
 }
