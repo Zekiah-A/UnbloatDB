@@ -17,7 +17,7 @@ enum Gender
 record Artist(int Age, string Location, Gender Gender);
 ```
 ```cs
-// Create an instance of UnbloatDB, using the folder "my_database_folder" to store the data.
+// Create an instance of UnbloatDB, using the folder "my_database_folder" to store the data. Here we are using the JSON file format.
 var database = new Database(new Configuration("my_database_folder", new JsonSerialiser()));
 
 // Save data to the database
