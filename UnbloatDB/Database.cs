@@ -92,10 +92,32 @@ public sealed class Database
         return found.ToArray(); 
     }
 
-    //TODO: Implement updating a record via a masterkey and object instance (so that records do not have to be "got" again and mutated before updating)
-    public async Task<bool> UpdateRecord<T>(string masterKey, T record) where T: notnull
+    public async Task<bool> UpdateRecord<T>(string masterKey, T data) where T: notnull
     {
-        return false;
+        var group = typeof(T).Name;
+        var groupPath = Path.Join(configuration.DataDirectory, group);
+        
+        if (!Directory.Exists(groupPath))
+        {
+            return false;
+        }
+        
+        var record = await GetRecord<T>(masterKey);
+        if (record is null)
+        {
+            return false;
+        }
+        
+        var updatedRecord = record with { Data = data };
+        await indexer.RemoveFromIndex(updatedRecord);
+        
+        var serialisedRecord = await configuration.FileFormat.Serialise(updatedRecord);
+        await File.WriteAllTextAsync(Path.Join(groupPath, record.MasterKey), serialisedRecord);
+
+        // Regenerate record indexes
+        await indexer.AddToIndex(updatedRecord);
+        
+        return true;
     }
 
     /// <summary>
@@ -115,7 +137,7 @@ public sealed class Database
         await indexer.RemoveFromIndex(record);
 
         var serialisedRecord = await configuration.FileFormat.Serialise(record);
-        await File.WriteAllTextAsync(Path.Join(configuration.DataDirectory, group, record.MasterKey), serialisedRecord);
+        await File.WriteAllTextAsync(Path.Join(groupPath, record.MasterKey), serialisedRecord);
 
         // Regenerate record indexes
         await indexer.AddToIndex(record);

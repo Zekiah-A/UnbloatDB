@@ -1,6 +1,7 @@
 using System.Collections;
 using UnbloatDB.Attributes;
 using UnbloatDB.Keys;
+using BindingFlags = System.Reflection.BindingFlags;
 
 namespace UnbloatDB;
 
@@ -136,12 +137,12 @@ internal sealed class SmartIndexer
                 // so we can just place the record before that.
                 var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
                 indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex,
-                    new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
+                    new KeyValuePair<string, string>(record.MasterKey, FormatObject(propertyValue).ToString()!));
             }
             else
             {
                 // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(FormatObject(propertyValue).ToString()!, record.MasterKey));
+                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(record.MasterKey, FormatObject(propertyValue).ToString()!));
             }
             
             // If it's a key reference, we update the "references" field of that record
@@ -181,12 +182,22 @@ internal sealed class SmartIndexer
                 }
                 
                 // Update the target record with the reference to this.
-                await typeof(Database).GetMethod(nameof(Database.UpdateRecord))!
+                await typeof(Database).GetMethod(
+                        nameof(Database.UpdateRecord),
+                        1,
+                        new[] { Type.MakeGenericMethodParameter(0) }
+                    )!
                     .MakeGenericMethod(targetType).InvokeAsync(database, targetRecord);
             }
         }
     }
-
+/*
+ *     1,
+    BindingFlags.NonPublic | BindingFlags.Static,
+    null,
+    new[] { Type.MakeGenericSignatureType(typeof(MyClass.Bar<>), Type.MakeGenericMethodParameter(0)) },
+    null
+ */
     private static bool IsEnumerable(Type type)
     {
         return type.Name != nameof(String) 
