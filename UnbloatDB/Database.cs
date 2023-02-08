@@ -5,10 +5,10 @@ public sealed class Database
     private readonly Configuration configuration;
     private readonly SmartIndexer indexer;
 
-    public Database(Configuration configuration)
+    public Database(Configuration config)
     {
-        this.configuration = configuration;
-        indexer = new SmartIndexer(this.configuration, this);
+        configuration = config;
+        indexer = new SmartIndexer(config, this);
     }
 
     /// <summary>
@@ -92,6 +92,12 @@ public sealed class Database
         return found.ToArray(); 
     }
 
+    //TODO: Implement updating a record via a masterkey and object instance (so that records do not have to be "got" again and mutated before updating)
+    public async Task<bool> UpdateRecord<T>(string masterKey, T record) where T: notnull
+    {
+        return false;
+    }
+
     /// <summary>
     /// Updates saved data and indexer information for a record without mutating it's master key / reference.
     /// </summary>
@@ -136,8 +142,8 @@ public sealed class Database
 
     /// <summary>
     /// Please only use this method for getting ALL records in a group, and returning only that. If you want to get all records
-    /// in a group, and then filter them down to select only those with a specific property, such as with linq. PLEASE use
-    /// "find records" instead, which will be able to make use of the smart indexer to run much faster.
+    /// in a group, and then filter them down to select only those with a specific property, such as via linq. PLEASE use
+    /// the "FindRecords<T, U>" method instead, which will be able to make use of the smart indexer to run much faster.
     /// </summary>
     /// <typeparam name="T">Record group we are retrieving all for.</typeparam>
     /// <returns>All records contained within the specified group.</returns>
