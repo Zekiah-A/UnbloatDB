@@ -185,19 +185,16 @@ internal sealed class SmartIndexer
                 await typeof(Database).GetMethod(
                         nameof(Database.UpdateRecord),
                         1,
-                        new[] { Type.MakeGenericMethodParameter(0) }
+                        BindingFlags.Public,
+                        null,
+                        new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
+                        null
                     )!
                     .MakeGenericMethod(targetType).InvokeAsync(database, targetRecord);
             }
         }
     }
-/*
- *     1,
-    BindingFlags.NonPublic | BindingFlags.Static,
-    null,
-    new[] { Type.MakeGenericSignatureType(typeof(MyClass.Bar<>), Type.MakeGenericMethodParameter(0)) },
-    null
- */
+
     private static bool IsEnumerable(Type type)
     {
         return type.Name != nameof(String) 
