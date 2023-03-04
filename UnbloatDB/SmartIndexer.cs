@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Linq.Expressions;
+using System.Reflection;
 using UnbloatDB.Attributes;
 using UnbloatDB.Keys;
 using BindingFlags = System.Reflection.BindingFlags;
@@ -185,9 +187,9 @@ internal sealed class SmartIndexer
                 await typeof(Database).GetMethod(
                         nameof(Database.UpdateRecord),
                         1,
-                        BindingFlags.Public,
+                        BindingFlags.Public | BindingFlags.Instance,
                         null,
-                        new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
+                        new[] { typeof(RecordStructure<>) }, //new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
                         null
                     )!
                     .MakeGenericMethod(targetType).InvokeAsync(database, targetRecord);

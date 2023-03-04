@@ -7,25 +7,6 @@ public class IndexerFile: IDisposable
 {
     public FileStream Stream;
     public string Path;
-
-    public int KeyLength =>
-        Index.FirstOrDefault().Equals(new KeyValuePair<string, string>()) ? 36 : Index.First().Key.Length;
-
-    public int HeaderLength
-    {
-        get
-        {
-            // We include the size (uint) of the header length at the file start too
-            var count = 4;
-            foreach (var pair in Index)
-            {
-                count += Encoding.UTF8.GetByteCount(pair.Key);
-                count += Encoding.UTF8.GetByteCount(pair.Value);
-            }
-            return count;
-        }
-    }
-    
     public List<KeyValuePair<string, string>> Index { get; private set; }
     private bool disposed;
     
@@ -47,7 +28,7 @@ public class IndexerFile: IDisposable
         var headerLength = reader.ReadUInt32();
         var lengths = new List<int>();
 
-        // HeaderLength includes length of total header length (first byte)
+        // GetHeaderLength() includes length of total header length (first byte)
         for (var i = 4; i < headerLength; i += 4)
         {
             lengths.Add((int) reader.ReadUInt32());
@@ -56,8 +37,8 @@ public class IndexerFile: IDisposable
         // Now that we have read past header, we should be in the main record body
         foreach (var length in lengths)
         {
-            var key = Encoding.UTF8.GetString(reader.ReadBytes(KeyLength));
-            var value = Encoding.UTF8.GetString(reader.ReadBytes(length - KeyLength));
+            var key = Encoding.UTF8.GetString(reader.ReadBytes(GetKeyLength()));
+            var value = Encoding.UTF8.GetString(reader.ReadBytes(length - GetKeyLength()));
             
             Index.Add(new KeyValuePair<string, string>(key, value));
         }
@@ -68,7 +49,7 @@ public class IndexerFile: IDisposable
         Stream.SetLength(0);
         using var writer = new BinaryWriter(Stream, Encoding.Default, true);
         writer.Seek(0, SeekOrigin.Begin);
-        writer.Write(BitConverter.GetBytes((uint) HeaderLength), 0, 4);
+        writer.Write(BitConverter.GetBytes((uint) GetHeaderLength()), 0, 4);
         
         // Uint = 4 bytes, write each key value pair length as a uint  
         foreach (var entry in Index)
@@ -113,7 +94,7 @@ public class IndexerFile: IDisposable
         
         // Update header length (+4 because we just added another uint32 record length to header)
         writer.Seek(0, SeekOrigin.Begin); 
-        writer.Write(BitConverter.GetBytes((uint) HeaderLength + 4), 0, 4);
+        writer.Write(BitConverter.GetBytes((uint) GetHeaderLength() + 4), 0, 4);
         writer.Flush();
         
         Index.Insert(index, pair);
@@ -149,7 +130,7 @@ public class IndexerFile: IDisposable
         // Update header length, (-4) because we just removed a 4 byte record length from the header 
         using var writer = new BinaryWriter(Stream, Encoding.Default, true);
         writer.Seek(0, SeekOrigin.Begin);
-        writer.Write(BitConverter.GetBytes((uint) HeaderLength - 4), 0, 4);
+        writer.Write(BitConverter.GetBytes((uint) GetHeaderLength() - 4), 0, 4);
         writer.Flush();
         
         Index.RemoveAt(index);
@@ -158,7 +139,7 @@ public class IndexerFile: IDisposable
     private int GetElementLocation(int elementIndex)
     {
         var location = 0;
-        location += HeaderLength;
+        location += GetHeaderLength();
         
         for (var i = 0; i < elementIndex; i++)
         {
@@ -174,7 +155,25 @@ public class IndexerFile: IDisposable
     {
         return headerIndex * 4 + 4;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int GetKeyLength()
+    {
+        return Index.FirstOrDefault().Equals(new KeyValuePair<string, string>()) ? 36 : Index.First().Key.Length;
+    }
 
+    private int GetHeaderLength()
+    {
+        // We include the size (uint) of the header length at the file start too
+        var count = 4;
+        foreach (var pair in Index)
+        {
+            count += Encoding.UTF8.GetByteCount(pair.Key);
+            count += Encoding.UTF8.GetByteCount(pair.Value);
+        }
+
+        return count;
+    }
 
     public void Dispose()
     {

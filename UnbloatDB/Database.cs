@@ -65,8 +65,8 @@ public sealed class Database
     /// </summary>
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
-    /// <typeparam name="U">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecords<T, U>(string byProperty, U value) where T : notnull where U : notnull
+    /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
+    public async Task<RecordStructure<T>[]> FindRecords<T, TValue>(string byProperty, TValue value) where T : notnull where TValue : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
@@ -75,7 +75,7 @@ public sealed class Database
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
         var found = new List<RecordStructure<T>>();
         var convertedValue = SmartIndexer.FormatObject(value);
-        
+
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
@@ -146,18 +146,19 @@ public sealed class Database
     } 
 
     /// <summary>
-    /// Deletes a specified record (via masterkey) from the database.
+    /// Deletes a specified record (via master key) from the database.
     /// </summary>
-    /// <param name="masterKey">The masterkey of the record that is being deleted.</param>
-    /// <param name="deleteRefrences">Delete all references to this record by other records via intraKey.</param>
+    /// <param name="masterKey">The master key of the record that is being deleted.</param>
     /// <typeparam name="T">The data type of the record that is being deleted.</typeparam>
-    public async Task DeleteRecord<T> (string masterKey, bool deleteRefrences = false) where T : notnull
+    public async Task DeleteRecord<T> (string masterKey) where T : notnull
     {
         var group = typeof(T).Name;
         var recordPath = Path.Join(configuration.DataDirectory, group, masterKey);
+        var record = await GetRecord<string>(masterKey);
         
-        if (File.Exists(group))
+        if (File.Exists(group) && record is not null)
         {
+            await indexer.RemoveFromIndex(record);
             File.Delete(recordPath);
         }
     }
@@ -165,7 +166,7 @@ public sealed class Database
     /// <summary>
     /// Please only use this method for getting ALL records in a group, and returning only that. If you want to get all records
     /// in a group, and then filter them down to select only those with a specific property, such as via linq. PLEASE use
-    /// the "FindRecords<T, U>" method instead, which will be able to make use of the smart indexer to run much faster.
+    /// the "FindRecords\<T, U>" method instead, which will be able to make use of the smart indexer to run much faster.
     /// </summary>
     /// <typeparam name="T">Record group we are retrieving all for.</typeparam>
     /// <returns>All records contained within the specified group.</returns>
@@ -190,23 +191,19 @@ public sealed class Database
         return found.ToArray();
     }
     
-    public async Task<RecordStructure<T>[]> FindRecordsAfter<T, U>(string byProperty, U value, bool descending = false) where T : notnull where U : notnull
+    public async Task<RecordStructure<T>[]> FindRecordsAfter<T, TValue>(string byProperty, TValue value, bool descending = false) where T : notnull where TValue : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
+        var found = new List<RecordStructure<T>>();
 
         if (!File.Exists(path))
         {
-            // TODO: File safety
-            // If this group doesn't even exist in the DB, fail.
-            // If the group does exist, but the property they are searching for does not in the record type, fail.
-            // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
-            // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
+            return found.ToArray();
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
-        var found = new List<RecordStructure<T>>();
         var position = 0;
 
         if (value is not IComparable comparableValue)
@@ -235,24 +232,20 @@ public sealed class Database
     /// </summary>
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
-    /// <typeparam name="U">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, U>(string byProperty, U value, bool descending = false) where T : notnull where U : notnull
+    /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
+    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, TValue>(string byProperty, TValue value, bool descending = false) where T : notnull where TValue : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
+        var found = new List<RecordStructure<T>>();
 
         if (!File.Exists(path))
         {
-            // TODO: File safety
-            // If this group doesn't even exist in the DB, fail.
-            // If the group does exist, but the property they are searching for does not in the record type, fail.
-            // If both group, record property exists, but no index directory for this group exists, regenerate all indexes for this group.
-            // If group, record property, index directory exists, but no indexer for this specific property, then regenerate indexes for just this property.
+            return found.ToArray();
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
-        var found = new List<RecordStructure<T>>();
         var position = 0;
 
         if (value is not IComparable comparableValue)
