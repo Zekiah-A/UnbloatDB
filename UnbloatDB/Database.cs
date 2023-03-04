@@ -72,10 +72,11 @@ public sealed class Database
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
         
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
-        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
+
+        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray();
         var found = new List<RecordStructure<T>>();
         var convertedValue = SmartIndexer.FormatObject(value);
-
+        
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {

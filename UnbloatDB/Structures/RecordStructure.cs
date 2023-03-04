@@ -6,7 +6,7 @@ public sealed record RecordStructure<T> where T : notnull
 {
     public string MasterKey { get; }
     public T Data { get; set; }
-    public List<PropertyKeyReferenceBase> Referencers { get; set; }
+    public List<object> Referencers { get; set; }
 
     // Some serialisers require parameterless constructor
     public RecordStructure() { }
@@ -15,6 +15,6 @@ public sealed record RecordStructure<T> where T : notnull
     {
         MasterKey = masterKey;
         Data = data;
-        Referencers = new List<PropertyKeyReferenceBase>();
+        Referencers = new List<object>();
     }
 }

@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json.Serialization;
+using OneOf;
 using UnbloatDB.Attributes;
 using UnbloatDB.Keys;
 using BindingFlags = System.Reflection.BindingFlags;
@@ -66,6 +68,32 @@ internal sealed class SmartIndexer
         {
             throw new Exception("Could not find indexer directory for record group " + nameof(record.GetType) + " in " + path);
         }
+        
+        // Remove/edit referencers to notify them that record has been deleted, a reverse mirror of what happens in the add method
+        foreach (var referencer in record.Referencers)
+        {
+            var referencerType = referencer.GetType().GetGenericTypeDefinition();
+            
+            // RecordStructure<>
+            var referenceRecord = await typeof(Database)
+                .GetMethod(nameof(Database.GetRecord))!
+                .MakeGenericMethod(referencerType)
+                .InvokeAsync(database, (referencer as KeyReferenceBase<object>)!.RecordKey);
+
+            // TODO: Delete this from referencers
+            
+            await typeof(Database)
+                .GetMethod(
+                    nameof(Database.UpdateRecord),
+                    1,
+                    BindingFlags.Public | BindingFlags.Instance,
+                    null,
+                    new[] { typeof(RecordStructure<>) }, //new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
+                    null
+                )!
+                .MakeGenericMethod(referencerType)
+                .InvokeAsync(database, referenceRecord);
+        }
 
         foreach (var property in typeof(T).GetProperties())
         {
@@ -92,8 +120,6 @@ internal sealed class SmartIndexer
 
             indexFile.Remove(found);
         }
-        
-        //TODO: Remove/edit referencers to notify them that record has been deleted
     }
 
     /// <summary>
@@ -167,24 +193,24 @@ internal sealed class SmartIndexer
 
                 // If we are in the same group (the target reference and record have the same generic type), then we use
                 // an IntraKey, otherwise we can utilise an Interkey.
+                var referencersProperty = targetRecord.GetType().GetProperty("Referencers")!;
                 if (targetType == typeof(T))
                 {
                     // This reflection abomination will attempt to call the list add method on the record to add this referencer.
                     var selfReference = new PropertyIntraKeyReference<T>(property.Name, record.MasterKey);
-                    var referencersProperty = targetRecord.GetType().GetProperty("Referencers")!;
                     referencersProperty.PropertyType.GetMethod("Add")!
                         .Invoke(referencersProperty.GetValue(targetRecord), new object[] { selfReference });
                 }
                 else
                 {
                     var selfReference = new PropertyInterKeyReference<T>(property.Name, record.MasterKey, typeof(T).Name);
-                    var referencersProperty = targetRecord.GetType().GetProperty("Referencers")!;
                     referencersProperty.PropertyType.GetMethod("Add")!
                         .Invoke(referencersProperty.GetValue(targetRecord), new object[] { selfReference });
                 }
                 
                 // Update the target record with the reference to this.
-                await typeof(Database).GetMethod(
+                await typeof(Database)
+                    .GetMethod(
                         nameof(Database.UpdateRecord),
                         1,
                         BindingFlags.Public | BindingFlags.Instance,
@@ -192,7 +218,8 @@ internal sealed class SmartIndexer
                         new[] { typeof(RecordStructure<>) }, //new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
                         null
                     )!
-                    .MakeGenericMethod(targetType).InvokeAsync(database, targetRecord);
+                    .MakeGenericMethod(targetType)
+                    .InvokeAsync(database, targetRecord);
             }
         }
     }
@@ -203,11 +230,11 @@ internal sealed class SmartIndexer
             && type.GetInterface(nameof(IEnumerable)) != null;
     }
     
-    internal static object FormatObject<T>(T value) where T : notnull
+    internal static OneOf<string, int, T> FormatObject<T>(T value) where T : notnull
     {
         if (typeof(T).BaseType is { IsEnum: true })
         {
-            return Convert.ChangeType(value, typeof(int));
+            return (int) Convert.ChangeType(value, typeof(int));
         }
         
         return NumberTypes.Contains(typeof(T)) ? value : value.ToString()!;

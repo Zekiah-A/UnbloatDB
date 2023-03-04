@@ -4,30 +4,31 @@ namespace UnbloatDB;
 
 public static class Extensions
 {
+    /// <summary>
+    /// Zero allocation array remove function
+    /// </summary>
     public static T[] RemoveAt<T>(this T[] source, int index)
     {
-        var dest = new T[source.Length - 1];
-        
         if (index > 0)
         {
-            Array.Copy(source, 0, dest, 0, index);
+            Array.Copy(source, 0, source, 0, index);
         }
 
         if (index < source.Length - 1)
         {
-            Array.Copy(source, index + 1, dest, index, source.Length - index - 1);
+            Array.Copy(source, index + 1, source, index, source.Length - index - 1);
         }
-
+    
+        Array.Resize(ref source, source.Length - 1);
         
-        return dest;
+        return source;
     }
     
-    public static async Task<object?> InvokeAsync(this MethodInfo @this, object obj, params object[] parameters)
+    public static async Task<object?> InvokeAsync(this MethodInfo @this, object instance, params object[] parameters)
     {
-        var task = (Task) @this.Invoke(obj, parameters)!;
+        var task = (Task) @this.Invoke(instance, parameters)!;
         await task.ConfigureAwait(false);
         var resultProperty = task.GetType().GetProperty("Result");
         return resultProperty?.GetValue(task);
     }
-    
 }
