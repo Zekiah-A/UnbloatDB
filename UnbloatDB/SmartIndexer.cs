@@ -72,25 +72,19 @@ internal sealed class SmartIndexer
         // Remove/edit referencers to notify them that record has been deleted, a reverse mirror of what happens in the add method
         foreach (var referencer in record.Referencers)
         {
-            var referencerType = referencer.GetType().GetGenericTypeDefinition();
+            var referencerType = referencer.GetType().GetGenericArguments().First();
             
             // RecordStructure<>
             var referenceRecord = await typeof(Database)
                 .GetMethod(nameof(Database.GetRecord))!
                 .MakeGenericMethod(referencerType)
-                .InvokeAsync(database, (referencer as KeyReferenceBase<object>)!.RecordKey);
+                .InvokeAsync(database, referencer.GetType().GetProperty("RecordKey").GetValue(referencer));
 
             // TODO: Delete this from referencers
-            
+
             await typeof(Database)
-                .GetMethod(
-                    nameof(Database.UpdateRecord),
-                    1,
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new[] { typeof(RecordStructure<>) }, //new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
-                    null
-                )!
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Single(method => method.Name == nameof(Database.UpdateRecord) && method.GetParameters().Length == 1)
                 .MakeGenericMethod(referencerType)
                 .InvokeAsync(database, referenceRecord);
         }
@@ -210,14 +204,8 @@ internal sealed class SmartIndexer
                 
                 // Update the target record with the reference to this.
                 await typeof(Database)
-                    .GetMethod(
-                        nameof(Database.UpdateRecord),
-                        1,
-                        BindingFlags.Public | BindingFlags.Instance,
-                        null,
-                        new[] { typeof(RecordStructure<>) }, //new[] { Type.MakeGenericSignatureType(typeof(RecordStructure<>)), Type.MakeGenericMethodParameter(0) },
-                        null
-                    )!
+                    .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                    .Single(method => method.Name == nameof(Database.UpdateRecord) && method.GetParameters().Length == 1)
                     .MakeGenericMethod(targetType)
                     .InvokeAsync(database, targetRecord);
             }

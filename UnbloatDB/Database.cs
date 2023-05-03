@@ -17,7 +17,7 @@ public sealed class Database
     /// <param name="data">The data of the record we are creating (assigned a master key, converted into record structure by DB).</param>
     /// <typeparam name="T">The data type of the record we are creating.</typeparam>
     /// <returns> String master key of the newly created record </returns>
-    public async Task<string> CreateRecord<T> (T data) where T : notnull
+    public async Task<string> CreateRecord<T>(T data) where T : notnull
     {
         var group = typeof(T).Name;
         var masterKey = Guid.NewGuid().ToString();
@@ -63,24 +63,24 @@ public sealed class Database
     /// Gets the first record from a supplied query property and value being searched for. For getting a record by it's
     /// unique Master Key, please use GetRecord<T>(string masterKey) instead, otherwise, this method will not return any results.
     /// </summary>
-    /// <param name="byProperty">Name of property in record that we are searching for.</param>
+    /// <param name="propertyName">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecords<T, TValue>(string byProperty, TValue value) where T : notnull where TValue : notnull
+    public async Task<RecordStructure<TKey>[]> FindRecords<TKey, TValue>(string propertyName, TValue value) where TKey : notnull where TValue : notnull
     {
-        var group = typeof(T).Name;
-        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
+        var group = typeof(TKey).Name;
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, propertyName);
         
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
 
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray();
-        var found = new List<RecordStructure<T>>();
+        var found = new List<RecordStructure<TKey>>();
         var convertedValue = SmartIndexer.FormatObject(value);
         
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<T>(indexFile.Index[position].Value);
+            var record = await GetRecord<TKey>(indexFile.Index[position].Value);
             if (record is not null)
             {
                 found.Add(record);
@@ -151,7 +151,7 @@ public sealed class Database
     /// </summary>
     /// <param name="masterKey">The master key of the record that is being deleted.</param>
     /// <typeparam name="T">The data type of the record that is being deleted.</typeparam>
-    public async Task DeleteRecord<T> (string masterKey) where T : notnull
+    public async Task DeleteRecord<T>(string masterKey) where T : notnull
     {
         var group = typeof(T).Name;
         var recordPath = Path.Join(configuration.DataDirectory, group, masterKey);

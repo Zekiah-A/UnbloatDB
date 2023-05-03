@@ -11,8 +11,6 @@ var databases = new List<Database>
     //new(new Configuration("binary", new BinarySerialiser()))
 };
 
-var db = new Database(new Configuration("my_database", new JsonSerialiser()));
-
 foreach (var database in databases)
 {
     Console.WriteLine("UnbloatDB v0.9a - ©Zekiah-A");
