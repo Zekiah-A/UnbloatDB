@@ -1,6 +1,6 @@
 namespace UnbloatDB.Attributes;
 
-[AttributeUsage(AttributeTargets.All)]
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public class DoNotIndexAttribute : Attribute
 {
     public DoNotIndexAttribute()
