@@ -1,5 +1,3 @@
-using UnbloatDB.Keys;
-
 namespace UnbloatDB;
 
 public sealed record RecordStructure<T> where T : notnull

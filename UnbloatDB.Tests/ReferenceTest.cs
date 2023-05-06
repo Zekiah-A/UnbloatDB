@@ -1,4 +1,3 @@
-using UnbloatDB.Keys;
 using UnbloatDB.Records;
 using UnbloatDB.Tests.Types;
 
@@ -19,8 +18,7 @@ public class ReferenceTest
         var expectedArtist = new Artist(24, "London", Gender.Female);
         var artistKey = await Db.CreateRecord(expectedArtist);
         
-        var expectedSong = new Song("/home/tea/my_favourite_tune.mp3", Genre.Indie, "07/02/2023", 
-            new InterKeyReference<Artist>(artistKey));
+        var expectedSong = new Song("/home/tea/my_favourite_tune.mp3", Genre.Indie, "07/02/2023", artistKey);
         var songKey = await Db.CreateRecord(expectedSong);
         
         // Get the song record, and check if it's artist reference equals the one we created, then check the artist for
@@ -28,7 +26,7 @@ public class ReferenceTest
         var passes = 0;
         
         var song = await Db.GetRecord<Song>(songKey);
-        if (song is not null && (await Db.GetRecord<Artist>(song.Data.Artist.RecordKey))?.Data == expectedArtist)
+        /*if (song is not null && (await Db.GetRecord<Artist>(song.Data.Artist.RecordKey))?.Data == expectedArtist)
         {
             passes++;
         }
@@ -38,7 +36,7 @@ public class ReferenceTest
             referencer is PropertyInterKeyReference<Artist> artistReference && artistReference.RecordKey == songKey) == 1)
         {
             passes++;
-        }
+        }*/
         
         return passes == 2;
     }

@@ -75,7 +75,7 @@ public sealed class Database
 
         var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray();
         var found = new List<RecordStructure<TKey>>();
-        var convertedValue = SmartIndexer.FormatObject(value);
+        var convertedValue = SmartIndexer.FormatObject(value).ToString();
         
         var position = Array.BinarySearch(values, convertedValue);
         while (position > 0)
