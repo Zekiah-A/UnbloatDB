@@ -25,6 +25,4 @@ public class XmlSerialiser : SerialiserBase
         var serializer = new XmlSerializer(typeof(T));
         return ValueTask.FromResult((T) serializer.Deserialize(data)!);
     }
-
-    
 }
