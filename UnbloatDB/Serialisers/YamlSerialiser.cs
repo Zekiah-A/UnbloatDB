@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Encodings.Web;
 using YamlDotNet.Serialization;
 
 namespace UnbloatDB.Serialisers;
