@@ -107,7 +107,7 @@ internal sealed class SmartIndexer
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
                 //TODO: For now we keep all format objects as string, soon we will compare numbers properly by ensuring comparison is same type as PropertyValue if possible
-                var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue));
+                var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue).ToString());
                 indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex,
                     new KeyValuePair<string, string>(record.MasterKey, FormatObject(propertyValue).ToString()));
             }

@@ -8,7 +8,8 @@ public class IndexerFile: IDisposable
     public string Path;
     public FileStream Stream;
     public List<KeyValuePair<string, string>> Index { get; }
-    
+    public Type ValueType; // TODO: Move to generics when code generation is introduced
+
     private bool disposed;
     private BinaryReader reader;
     private BinaryWriter writer;
