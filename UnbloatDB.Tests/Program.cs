@@ -31,7 +31,7 @@ foreach (var database in databases)
     var deleteTest = new DeleteTest(database);
     Console.WriteLine("Result of Delete test: " + await deleteTest.RunTest());
 
-    //var updateTest = new UpdateTest(database);
-    //Console.WriteLine("Result of Update test: " + await updateTest.RunTest());
+    var updateTest = new UpdateTest(database);
+    Console.WriteLine("Result of Update test: " + await updateTest.RunTest());
 }
 

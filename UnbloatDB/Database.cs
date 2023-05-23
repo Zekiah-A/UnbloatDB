@@ -73,21 +73,21 @@ public sealed class Database
         
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
 
-        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray();
+        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
         var found = new List<RecordStructure<TKey>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
-        
-        var position = Array.BinarySearch(values, convertedValue);
+
+        var position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<TKey>(indexFile.Index[position].Value);
+            var record = await GetRecord<TKey>(indexFile.Index[position].Key);
             if (record is not null)
             {
                 found.Add(record);
-                values = values.RemoveAt(position);
+                values.RemoveAt(position);
             }
 
-            position = Array.BinarySearch(values, convertedValue);
+            position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
         }
 
         return found.ToArray(); 
