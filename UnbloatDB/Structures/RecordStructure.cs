@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace UnbloatDB;
 
 public sealed record RecordStructure<T> where T : notnull
 {
-    public string MasterKey { get; }
+    [JsonInclude]
+    public string MasterKey { get; private set; }
     public T Data { get; set; }
     public Dictionary<Type, string> Referencers { get; set; }
 

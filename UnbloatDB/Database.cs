@@ -155,9 +155,9 @@ public sealed class Database
     {
         var group = typeof(T).Name;
         var recordPath = Path.Join(configuration.DataDirectory, group, masterKey);
-        var record = await GetRecord<string>(masterKey);
+        var record = await GetRecord<T>(masterKey);
         
-        if (File.Exists(group) && record is not null)
+        if (File.Exists(recordPath) && record is not null)
         {
             await indexer.RemoveFromIndex(record);
             File.Delete(recordPath);
@@ -192,29 +192,34 @@ public sealed class Database
         return found.ToArray();
     }
     
-    public async Task<RecordStructure<T>[]> FindRecordsAfter<T, TValue>(string byProperty, TValue value, bool descending = false) where T : notnull where TValue : notnull
+    public async Task<RecordStructure<TKey>[]> FindRecordsAfter<TKey, TValue>(string byProperty, TValue value, bool descending = false) where TKey : notnull where TValue : notnull
     {
-        var group = typeof(T).Name;
+        var group = typeof(TKey).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
-        var found = new List<RecordStructure<T>>();
 
         if (!File.Exists(path))
         {
-            return found.ToArray();
+            return Array.Empty<RecordStructure<TKey>>();
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
-        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
+        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
+        var found = new List<RecordStructure<TKey>>();
+        var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
-        if (value is not IComparable comparableValue)
+        if (convertedValue is not IComparable comparableValue)
         {
-            return found.ToArray();
+            return Array.Empty<RecordStructure<TKey>>();
         }
-        
+
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            found.Add((await GetRecord<T>(indexFile.Index.ElementAt(position).Value))!);
+            var record = await GetRecord<TKey>(indexFile.Index.ElementAt(position).Key);
+            if (record is not null)
+            {
+                found.Add(record);
+            }
             position++;
         }
 
@@ -234,29 +239,34 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<T>[]> FindRecordsBefore<T, TValue>(string byProperty, TValue value, bool descending = false) where T : notnull where TValue : notnull
+    public async Task<RecordStructure<TKey>[]> FindRecordsBefore<TKey, TValue>(string byProperty, TValue value, bool descending = false) where TKey : notnull where TValue : notnull
     {
-        var group = typeof(T).Name;
+        var group = typeof(TKey).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
-        var found = new List<RecordStructure<T>>();
 
         if (!File.Exists(path))
         {
-            return found.ToArray();
+            return Array.Empty<RecordStructure<TKey>>();
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
-        var values = indexFile.Index.Select(keyValue => keyValue.Key).ToArray<object>();
+        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
+        var found = new List<RecordStructure<TKey>>();
+        var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
-        if (value is not IComparable comparableValue)
+        if (convertedValue is not IComparable comparableValue)
         {
-            return found.ToArray();
+            return Array.Empty<RecordStructure<TKey>>();
         }
         
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            found.Add((await GetRecord<T>(indexFile.Index.ElementAt(position).Value))!);
+            var record = await GetRecord<TKey>(indexFile.Index.ElementAt(position).Key);
+            if (record is not null)
+            {
+                found.Add(record);
+            }
             position++;
         }
 

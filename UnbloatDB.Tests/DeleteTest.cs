@@ -15,12 +15,12 @@ internal sealed class DeleteTest
     public async Task<bool> RunTest()
     {
         var toDelete = new Artist(25, "Bradford", Gender.Male);
-        var toDeleteKey = await Db.CreateRecord<Artist>(toDelete);
+        var toDeleteKey = await Db.CreateRecord(toDelete);
 
         await Db.DeleteRecord<Artist>(toDeleteKey);
 
         var result = await Db.GetRecord<Artist>(toDeleteKey);
         
-        return result == null;
+        return result is null;
     }
 }

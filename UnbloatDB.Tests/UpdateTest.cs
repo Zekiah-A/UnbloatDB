@@ -24,10 +24,10 @@ internal sealed class UpdateTest
             return false;
         }
         
-        var updatedArtist = artist with { Age = 25 };
+        var updatedArtist = artist with { Age = 30 };
         await Db.UpdateRecord(artistOriginal with { Data = updatedArtist });
         
         var result = await Db.GetRecord<Artist>(artistKey);
-        return !result.Equals(artistOriginal);
+        return !result!.Data.Age.Equals(artistOriginal.Data.Age);
     }
 }
