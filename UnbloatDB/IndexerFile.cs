@@ -3,23 +3,25 @@ using System.Text;
 
 namespace UnbloatDB;
 
-public class IndexerFile: IDisposable
+public class IndexerFile : IDisposable
 {
     public string Path;
     public FileStream Stream;
-    public List<KeyValuePair<string, string>> Index { get; }
-    public Type ValueType; // TODO: Move to generics when code generation is introduced
-
+    public List<KeyValuePair<string, object>> Index { get; }
+    public Type ValueType;
+    
     private bool disposed;
     private BinaryReader reader;
     private BinaryWriter writer;
     private const int KeyLength = 36;
     
-    public IndexerFile(string fromFile)
+    // TODO: Remove valuetype once code generation is implemented
+    public IndexerFile(string fromFile, Type valueType)
     {
+        ValueType = valueType;
         Path = fromFile;
         Stream = new FileStream(fromFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        Index = new List<KeyValuePair<string, string>>();
+        Index = new List<KeyValuePair<string, object>>();
         reader = new BinaryReader(Stream, Encoding.Default, true);
         writer = new BinaryWriter(Stream, Encoding.Default, true);
 
@@ -46,7 +48,7 @@ public class IndexerFile: IDisposable
             var key = Encoding.UTF8.GetString(reader.ReadBytes(KeyLength));
             var value = Encoding.UTF8.GetString(reader.ReadBytes(length - KeyLength));
             
-            Index.Add(new KeyValuePair<string, string>(key, value));
+            Index.Add(new KeyValuePair<string, object>(key, value));
         }
     }
         
@@ -59,20 +61,20 @@ public class IndexerFile: IDisposable
         // Uint = 4 bytes, write each key value pair length as a uint  
         foreach (var entry in Index)
         {
-            writer.Write((uint) (Encoding.UTF8.GetByteCount(entry.Key) + Encoding.UTF8.GetByteCount(entry.Value)));
+            writer.Write((uint) (Encoding.UTF8.GetByteCount(entry.Key) + Encoding.UTF8.GetByteCount((string) entry.Value)));
         }
 
         foreach (var entry in Index)
         {
             writer.Write(Encoding.UTF8.GetBytes(entry.Key));
-            writer.Write(Encoding.UTF8.GetBytes(entry.Value));
+            writer.Write(Encoding.UTF8.GetBytes((string)  entry.Value));
         }
     }
 
-    public void Insert(int index, KeyValuePair<string, string> pair)
+    public void Insert(int index, KeyValuePair<string, object> pair)
     {
         {
-            var pairLength = Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value);
+            var pairLength = Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount((string) pair.Value);
             // We need to make space to insert this new record, so shift over everything after this by the size of the
             // record we are to add
             Stream.Seek(GetElementLocation(index), SeekOrigin.Begin);
@@ -84,7 +86,7 @@ public class IndexerFile: IDisposable
             // First write the record key - value to the right location in the file
             writer.Seek(GetElementLocation(index), SeekOrigin.Begin);
             writer.Write(Encoding.UTF8.GetBytes(pair.Key));
-            writer.Write(Encoding.UTF8.GetBytes(pair.Value));
+            writer.Write(Encoding.UTF8.GetBytes((string) pair.Value));
             writer.Flush();
         }
         {
@@ -99,7 +101,7 @@ public class IndexerFile: IDisposable
 
             // Append this record's length to our newly made space in the header of in the file
             writer.Seek(GetHeaderLocation(index), SeekOrigin.Begin);
-            writer.Write((uint) (Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value)));
+            writer.Write((uint) (Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount((string) pair.Value)));
             writer.Flush();
             
             // Update header length (+4 because we just added another uint32 record length to header)
@@ -107,6 +109,7 @@ public class IndexerFile: IDisposable
             writer.Write(BitConverter.GetBytes((uint) GetHeaderLength() + sizeof(uint)), 0, sizeof(uint));
             writer.Flush();
         }
+
         Index.Insert(index, pair);
     }
 
@@ -151,12 +154,12 @@ public class IndexerFile: IDisposable
         for (var i = 0; i < elementIndex; i++)
         {
             location += Encoding.UTF8.GetByteCount(Index[i].Key);
-            location += Encoding.UTF8.GetByteCount(Index[i].Value);
+            location += Encoding.UTF8.GetByteCount((string) Index[i].Value);
         }
 
         return location;
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetHeaderLocation(int headerIndex)
     {

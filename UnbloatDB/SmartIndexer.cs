@@ -45,7 +45,7 @@ internal sealed class SmartIndexer
                 continue;
             }
             
-            OpenIndex(Path.Join(path, property.Name));
+            OpenIndex(Path.Join(path, property.Name), property.GetType());
         }
     }
     
@@ -61,7 +61,26 @@ internal sealed class SmartIndexer
         // If there is no indexer directory for this group, then regenerate all indexes for this group.
         if (!Directory.Exists(path))
         {
-            throw new Exception("Could not find indexer directory for record group " + record.GetType().Name + " in " + path);
+            throw new Exception("Could not find indexer directory for record group " + group + " in " + path);
+        }
+
+        foreach (var property in typeof(T).GetProperties())
+        {
+            // Do not delete collection types, do not follow database normalisation rules
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.GetType()))
+            {
+                continue;
+            }
+            
+            var indexPath = Path.Join(path, property.Name);
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.GetType());
+            // TODO: Split up the keys and values in index to fix having to constantly split them
+            var values = indexFile.Index.Select(pair => pair.Value).ToList();
+            var index = values.BinarySearch(FormatObject(property.GetValue(record.Data)!).ToString()!);
+            if (index > 0)
+            {
+                indexFile.Remove(index);
+            }
         }
     }
 
@@ -89,7 +108,7 @@ internal sealed class SmartIndexer
             }
 
             var indexPath = Path.Join(path, property.Name);
-            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath);
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.GetType());
             var propertyValue = property.GetValue(record.Data);
 
             // Do not index null values for now, way to handle such cases must be found later
@@ -109,12 +128,12 @@ internal sealed class SmartIndexer
                 //TODO: For now we keep all format objects as string, soon we will compare numbers properly by ensuring comparison is same type as PropertyValue if possible
                 var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue).ToString());
                 indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex,
-                    new KeyValuePair<string, string>(record.MasterKey, FormatObject(propertyValue).ToString()));
+                    new KeyValuePair<string, object>(record.MasterKey, FormatObject(propertyValue).ToString()));
             }
             else
             {
                 // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, string>(record.MasterKey, FormatObject(propertyValue).ToString()));
+                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, object>(record.MasterKey, FormatObject(propertyValue).ToString()));
             }
         }
     }
@@ -135,9 +154,9 @@ internal sealed class SmartIndexer
         return NumberTypes.Contains(value.GetType()) ? value : value.ToString()!;
     }
     
-    public IndexerFile OpenIndex(string path)
+    public IndexerFile OpenIndex(string path, Type valueType)
     {
-        var indexer = new IndexerFile(path);
+        var indexer = new IndexerFile(path, valueType);
         Indexers.Add(path, indexer);
         return indexer;
     }

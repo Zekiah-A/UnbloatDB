@@ -66,21 +66,21 @@ public sealed class Database
     /// <param name="propertyName">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<TKey>[]> FindRecords<TKey, TValue>(string propertyName, TValue value) where TKey : notnull where TValue : notnull
+    public async Task<RecordStructure<TGroup>[]> FindRecords<TGroup, TValue>(string propertyName, TValue value) where TGroup : notnull where TValue : notnull
     {
-        var group = typeof(TKey).Name;
+        var group = typeof(TGroup).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, propertyName);
         
-        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
 
         var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
-        var found = new List<RecordStructure<TKey>>();
+        var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
 
         var position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<TKey>(indexFile.Index[position].Key);
+            var record = await GetRecord<TGroup>(indexFile.Index[position].Key);
             if (record is not null)
             {
                 found.Add(record);
@@ -191,31 +191,40 @@ public sealed class Database
 
         return found.ToArray();
     }
-    
-    public async Task<RecordStructure<TKey>[]> FindRecordsAfter<TKey, TValue>(string byProperty, TValue value, bool descending = false) where TKey : notnull where TValue : notnull
+
+    public IndexerFile GetGroupIndexer<TGroup>(string forProperty, Type propertyType)
     {
-        var group = typeof(TKey).Name;
+        var group = typeof(TGroup).Name;
+        var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, forProperty);
+        var index = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, propertyType);
+        
+        return index;
+    }
+
+    public async Task<RecordStructure<TGroup>[]> FindRecordsAfter<TGroup, TValue>(string byProperty, TValue value, bool descending = false) where TGroup : notnull where TValue : notnull
+    {
+        var group = typeof(TGroup).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
 
         if (!File.Exists(path))
         {
-            return Array.Empty<RecordStructure<TKey>>();
+            return Array.Empty<RecordStructure<TGroup>>();
         }
 
-        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
         var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
-        var found = new List<RecordStructure<TKey>>();
+        var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
         if (convertedValue is not IComparable comparableValue)
         {
-            return Array.Empty<RecordStructure<TKey>>();
+            return Array.Empty<RecordStructure<TGroup>>();
         }
 
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            var record = await GetRecord<TKey>(indexFile.Index.ElementAt(position).Key);
+            var record = await GetRecord<TGroup>(indexFile.Index.ElementAt(position).Key);
             if (record is not null)
             {
                 found.Add(record);
@@ -239,30 +248,30 @@ public sealed class Database
     /// <param name="byProperty">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<TKey>[]> FindRecordsBefore<TKey, TValue>(string byProperty, TValue value, bool descending = false) where TKey : notnull where TValue : notnull
+    public async Task<RecordStructure<TGroup>[]> FindRecordsBefore<TGroup, TValue>(string byProperty, TValue value, bool descending = false) where TGroup : notnull where TValue : notnull
     {
-        var group = typeof(TKey).Name;
+        var group = typeof(TGroup).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, byProperty);
 
         if (!File.Exists(path))
         {
-            return Array.Empty<RecordStructure<TKey>>();
+            return Array.Empty<RecordStructure<TGroup>>();
         }
 
-        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path);
+        var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
         var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
-        var found = new List<RecordStructure<TKey>>();
+        var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
         if (convertedValue is not IComparable comparableValue)
         {
-            return Array.Empty<RecordStructure<TKey>>();
+            return Array.Empty<RecordStructure<TGroup>>();
         }
         
         while (comparableValue.CompareTo(values[position]) != -1)
         {
-            var record = await GetRecord<TKey>(indexFile.Index.ElementAt(position).Key);
+            var record = await GetRecord<TGroup>(indexFile.Index.ElementAt(position).Key);
             if (record is not null)
             {
                 found.Add(record);
