@@ -7,7 +7,9 @@ public class IndexerFile : IDisposable
 {
     public string Path;
     public FileStream Stream;
-    public List<KeyValuePair<string, object>> Index { get; }
+    public Index Index;
+    public List<string> IndexKeys { get; }
+    public List<object> IndexValues { get; }
     public Type ValueType;
     
     private bool disposed;
@@ -21,7 +23,9 @@ public class IndexerFile : IDisposable
         ValueType = valueType;
         Path = fromFile;
         Stream = new FileStream(fromFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        Index = new List<KeyValuePair<string, object>>();
+        IndexKeys = new List<string>();
+        IndexValues= new List<object>();
+        Index = new Index(IndexKeys, IndexValues);
         reader = new BinaryReader(Stream, Encoding.Default, true);
         writer = new BinaryWriter(Stream, Encoding.Default, true);
 
@@ -153,8 +157,8 @@ public class IndexerFile : IDisposable
         
         for (var i = 0; i < elementIndex; i++)
         {
-            location += Encoding.UTF8.GetByteCount(Index[i].Key);
-            location += Encoding.UTF8.GetByteCount((string) Index[i].Value);
+            location += Encoding.UTF8.GetByteCount(IndexKeys[i]);
+            location += Encoding.UTF8.GetByteCount((string) IndexValues[i]); // TODO: This string cast on value is just wrong.
         }
 
         return location;

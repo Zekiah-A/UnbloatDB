@@ -73,14 +73,14 @@ public sealed class Database
         
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
 
-        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
+        var values = indexFile.IndexValues.ToList(); // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
 
         var position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
         while (position > 0)
         {
-            var record = await GetRecord<TGroup>(indexFile.Index[position].Key);
+            var record = await GetRecord<TGroup>(indexFile.IndexKeys[position]);
             if (record is not null)
             {
                 found.Add(record);
@@ -212,7 +212,7 @@ public sealed class Database
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
-        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
+        var values = indexFile.IndexValues.ToList();  // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
@@ -259,7 +259,7 @@ public sealed class Database
         }
 
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
-        var values = indexFile.Index.Select(keyValue => keyValue.Value).ToList();
+        var values = indexFile.IndexValues.ToList();  // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
         var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
