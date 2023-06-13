@@ -75,9 +75,8 @@ public sealed class Database
 
         var values = indexFile.IndexValues.ToList(); // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
-        var convertedValue = SmartIndexer.FormatObject(value).ToString();
 
-        var position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
+        var position = values.BinarySearch(value);
         while (position > 0)
         {
             var record = await GetRecord<TGroup>(indexFile.IndexKeys[position]);
@@ -87,7 +86,7 @@ public sealed class Database
                 values.RemoveAt(position);
             }
 
-            position = convertedValue is null ? -1 : values.BinarySearch(convertedValue);
+            position = values.BinarySearch(value);
         }
 
         return found.ToArray(); 
@@ -214,10 +213,9 @@ public sealed class Database
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
         var values = indexFile.IndexValues.ToList();  // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
-        var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
-        if (convertedValue is not IComparable comparableValue)
+        if (value is not IComparable comparableValue)
         {
             return Array.Empty<RecordStructure<TGroup>>();
         }
@@ -261,10 +259,9 @@ public sealed class Database
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
         var values = indexFile.IndexValues.ToList();  // We have to copy it so we don't mutate the index (would be fatal)
         var found = new List<RecordStructure<TGroup>>();
-        var convertedValue = SmartIndexer.FormatObject(value).ToString();
         var position = 0;
 
-        if (convertedValue is not IComparable comparableValue)
+        if (value is not IComparable comparableValue)
         {
             return Array.Empty<RecordStructure<TGroup>>();
         }

@@ -45,7 +45,7 @@ internal sealed class SmartIndexer
                 continue;
             }
             
-            OpenIndex(Path.Join(path, property.Name), property.GetType());
+            OpenIndex(Path.Join(path, property.Name), property.PropertyType);
         }
     }
     
@@ -67,16 +67,16 @@ internal sealed class SmartIndexer
         foreach (var property in typeof(T).GetProperties())
         {
             // Do not delete collection types, do not follow database normalisation rules
-            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.GetType()))
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.PropertyType))
             {
                 continue;
             }
             
             var indexPath = Path.Join(path, property.Name);
-            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.GetType());
-            // TODO: Split up the keys and values in index to fix having to constantly split them
-            var values = indexFile.Index.Select(pair => pair.Value).ToList();
-            var index = values.BinarySearch(FormatObject(property.GetValue(record.Data)!).ToString()!);
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.PropertyType);
+
+            var values = indexFile.IndexValues.ToList(); // We have to copy it so we don't mutate the index (would be fatal)
+            var index = values.BinarySearch(property.GetValue(record.Data)!);
             if (index > 0)
             {
                 indexFile.Remove(index);
@@ -102,13 +102,13 @@ internal sealed class SmartIndexer
         foreach (var property in typeof(T).GetProperties())
         {
             // Do not index collection types, do not follow database normalisation rules
-            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.GetType()))
+            if (Attribute.IsDefined(property, typeof(DoNotIndexAttribute)) || IsEnumerable(property.PropertyType))
             {
                 continue;
             }
 
             var indexPath = Path.Join(path, property.Name);
-            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.GetType());
+            var indexFile = Indexers.GetValueOrDefault(indexPath) ?? OpenIndex(indexPath, property.PropertyType);
             var propertyValue = property.GetValue(record.Data);
 
             // Do not index null values for now, way to handle such cases must be found later
@@ -119,21 +119,20 @@ internal sealed class SmartIndexer
 
             if (indexFile.Index.Count > 0)
             {
-                var values = indexFile.Index.Select(keyValue => keyValue.Value).ToArray<object>();
+                var values = indexFile.IndexValues.ToList(); // We have to copy it so we don't mutate the index (would be fatal)
                 
                 // Figure out where to put in index, so we do not need to sort later by first binary searching for
                 // same value, and appending after, if not already in the array, we analyse where it should go.
                 // If value is not found, will give bitwise compliment negative number of the next value bigger than what we want,
                 // so we can just place the record before that.
-                //TODO: For now we keep all format objects as string, soon we will compare numbers properly by ensuring comparison is same type as PropertyValue if possible
-                var foundIndex = Array.BinarySearch(values, FormatObject(propertyValue).ToString());
+                var foundIndex = values.BinarySearch(propertyValue);
                 indexFile.Insert(foundIndex >= 0 ? foundIndex : ~foundIndex,
-                    new KeyValuePair<string, object>(record.MasterKey, FormatObject(propertyValue).ToString()));
+                    new KeyValuePair<string, object>(record.MasterKey, propertyValue));
             }
             else
             {
                 // If no previous approaches worked (index length is probably zero/empty), then just add value to end of index.
-                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, object>(record.MasterKey, FormatObject(propertyValue).ToString()));
+                indexFile.Insert(indexFile.Index.Count, new KeyValuePair<string, object>(record.MasterKey, propertyValue));
             }
         }
     }
@@ -143,17 +142,7 @@ internal sealed class SmartIndexer
         return type.Name != nameof(String) 
             && type.GetInterface(nameof(IEnumerable)) != null;
     }
-    
-    internal static object FormatObject(object value)
-    {
-        if (value.GetType() is { IsEnum: true })
-        {
-            return (int) Convert.ChangeType(value, typeof(int));
-        }
-        
-        return NumberTypes.Contains(value.GetType()) ? value : value.ToString()!;
-    }
-    
+
     public IndexerFile OpenIndex(string path, Type valueType)
     {
         var indexer = new IndexerFile(path, valueType);
