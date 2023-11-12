@@ -8,7 +8,7 @@ public sealed class Database
     public Database(Configuration config)
     {
         configuration = config;
-        indexer = new SmartIndexer(config, this);
+        indexer = new SmartIndexer(config);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public sealed class Database
         var serialisedRecord = await configuration.FileFormat.Serialise(structuredRecord);
         await File.WriteAllTextAsync(Path.Join(configuration.DataDirectory, group, masterKey), serialisedRecord);
         
-        await indexer.AddToIndex(structuredRecord);
+        indexer.AddToIndex(structuredRecord);
 
         return masterKey;
     }
@@ -109,13 +109,13 @@ public sealed class Database
         }
         
         var updatedRecord = record with { Data = data };
-        await indexer.RemoveFromIndex(updatedRecord);
+        indexer.RemoveFromIndex(updatedRecord);
         
         var serialisedRecord = await configuration.FileFormat.Serialise(updatedRecord);
         await File.WriteAllTextAsync(Path.Join(groupPath, record.MasterKey), serialisedRecord);
 
         // Regenerate record indexes
-        await indexer.AddToIndex(updatedRecord);
+        indexer.AddToIndex(updatedRecord);
         
         return true;
     }
@@ -134,13 +134,13 @@ public sealed class Database
             return false;
         }
         
-        await indexer.RemoveFromIndex(record);
+        indexer.RemoveFromIndex(record);
 
         var serialisedRecord = await configuration.FileFormat.Serialise(record);
         await File.WriteAllTextAsync(Path.Join(groupPath, record.MasterKey), serialisedRecord);
 
         // Regenerate record indexes
-        await indexer.AddToIndex(record);
+        indexer.AddToIndex(record);
 
         return true;
     } 
@@ -158,7 +158,7 @@ public sealed class Database
         
         if (File.Exists(recordPath) && record is not null)
         {
-            await indexer.RemoveFromIndex(record);
+            indexer.RemoveFromIndex(record);
             File.Delete(recordPath);
         }
     }

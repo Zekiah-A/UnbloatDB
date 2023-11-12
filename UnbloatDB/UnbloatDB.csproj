@@ -4,11 +4,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <EnableSourceGenerator>true</EnableSourceGenerator>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="BinaryPack" Version="1.0.3" />
-      <PackageReference Include="OneOf" Version="3.0.243" />
-      <PackageReference Include="YamlDotNet" Version="13.1.0" />
+        <PackageReference Include="BinaryPack" Version="1.0.3" />
+        <PackageReference Include="YamlDotNet" Version="13.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\UnbloatDB.Generators\UnbloatDB.Generators.csproj"
+                        OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

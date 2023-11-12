@@ -1,5 +1,4 @@
 using System.Collections;
-using OneOf;
 using UnbloatDB.Attributes;
 
 namespace UnbloatDB;
@@ -7,23 +6,13 @@ namespace UnbloatDB;
 internal sealed class SmartIndexer
 {
     private readonly Configuration configuration;
-    private readonly Database database;
     public Dictionary<string, IndexerFile> Indexers { get; set; }
     
-    private static readonly HashSet<Type> NumberTypes = new()
-    {
-        typeof(int), typeof(double), typeof(decimal),
-        typeof(long), typeof(short), typeof(sbyte),
-        typeof(byte), typeof(ulong), typeof(ushort),  
-        typeof(uint), typeof(float)
-    };
-
-    public SmartIndexer(Configuration config, Database db)
+    public SmartIndexer(Configuration config)
     {
         Indexers = new Dictionary<string, IndexerFile>();
         
         configuration = config;
-        database = db;
     }
 
     /// <summary>
@@ -53,7 +42,7 @@ internal sealed class SmartIndexer
     /// Removes each property of a record structure from the record indexer
     /// </summary>
     /// <param name="record">Record being removed from indexer</param>
-    public async Task RemoveFromIndex<T>(RecordStructure<T> record) where T : notnull
+    public void RemoveFromIndex<T>(RecordStructure<T> record) where T : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory);
@@ -88,7 +77,7 @@ internal sealed class SmartIndexer
     /// Create index data for each of a record's properties, so that it can be searched for by property and located quickly.
     /// </summary>
     /// <param name="record">Record being indexed by smart indexer</param>
-    public async Task AddToIndex<T>(RecordStructure<T> record) where T : notnull
+    public void AddToIndex<T>(RecordStructure<T> record) where T : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory);

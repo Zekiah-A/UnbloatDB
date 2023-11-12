@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -53,7 +52,7 @@ public class IndexerFile : IDisposable
         foreach (var length in lengths)
         {
             var key = Encoding.UTF8.GetString(reader.ReadBytes(KeyLength));
-            var value = ReadBinaryData(reader, length - KeyLength);
+            var value = ReadBinaryData(length - KeyLength);
             
             Index.Add(new KeyValuePair<string, object>(key, value));
         }
@@ -243,10 +242,11 @@ public class IndexerFile : IDisposable
 
         return (preWriter.BaseStream, preWriter.BaseStream.Position);
     }
-
-    private object ReadBinaryData(BinaryReader binaryReader, int count = 0)
+    
+    private object ReadBinaryData(int count = 0)
     {
-        var primitiveRead = ReadBinaryDataInternal(ValueType, binaryReader, count);
+        var preReadPosition = reader.BaseStream.Position;
+        var primitiveRead = ReadBinaryDataInternal(ValueType, count);
         if (primitiveRead is not null)
         {
             return primitiveRead;
@@ -254,7 +254,8 @@ public class IndexerFile : IDisposable
 
         // All other non-primative but supported types are marshalled from ValueType.
         var type = DetermineMarshalType();
-        var marshalledRead = ReadBinaryDataInternal(type, binaryReader, count);
+        reader.BaseStream.Seek(preReadPosition, SeekOrigin.Begin); // We have to go back because we already read too
+        var marshalledRead = ReadBinaryDataInternal(type, count);
         if (marshalledRead is null)
         {
             throw new InvalidOperationException($"Index file can not process data of value type {ValueType.FullName}");
@@ -263,71 +264,71 @@ public class IndexerFile : IDisposable
         return ConvertFromMarshalType(marshalledRead);
     }
 
-    private object? ReadBinaryDataInternal(Type type, BinaryReader binaryReader, int count = 0)
+    private object? ReadBinaryDataInternal(Type type, int count = 0)
     {
         if (type == typeof(bool))
         {
-            return binaryReader.ReadBoolean();
+            return reader.ReadBoolean();
         }
         if (type == typeof(byte))
         {
-            return binaryReader.ReadByte();
+            return reader.ReadByte();
         }
         if (type == typeof(char))
         {
-            return binaryReader.ReadBytes(count);
+            return reader.ReadBytes(count);
         }
         if (type == typeof(char[]))
         {
-            return binaryReader.ReadChars(count);
+            return reader.ReadChars(count);
         }
         if (type == typeof(decimal))
         {
-            return binaryReader.ReadDecimal();
+            return reader.ReadDecimal();
         }
         if (type == typeof(double))
         {
-            return binaryReader.ReadDouble();
+            return reader.ReadDouble();
         }
         if (type == typeof(Half))
         {
-            return binaryReader.ReadHalf();
+            return reader.ReadHalf();
         }
         if (type == typeof(short))
         {
-            return binaryReader.ReadInt16();
+            return reader.ReadInt16();
         }
         if (type == typeof(int))
         {
-            return binaryReader.ReadInt32();
+            return reader.ReadInt32();
         }
         if (type == typeof(long))
         {
-            return binaryReader.ReadInt64();
+            return reader.ReadInt64();
         }
         if (type == typeof(sbyte))
         {
-            return binaryReader.ReadSByte();
+            return reader.ReadSByte();
         }
         if (type == typeof(float))
         {
-            return binaryReader.ReadSingle();
+            return reader.ReadSingle();
         }
         if (type == typeof(string))
         {
-            return binaryReader.ReadString();
+            return reader.ReadString();
         }
         if (type == typeof(ushort))
         {
-            return binaryReader.ReadUInt16();
+            return reader.ReadUInt16();
         }
         if (type == typeof(uint))
         {
-            return binaryReader.ReadUInt32();
+            return reader.ReadUInt32();
         }
         if (type == typeof(ulong))
         {
-            return binaryReader.ReadUInt64();
+            return reader.ReadUInt64();
         }
 
         return null;
@@ -370,7 +371,7 @@ public class IndexerFile : IDisposable
             return DateTime.FromBinary((long)data);
         }
 
-        if (ValueType == typeof(DateTimeKind))
+        if (ValueType == typeof(DateTimeOffset))
         {
             var dataBytes = (byte[])data;
             var ticksOffsetTicks = Unsafe.As<byte[], long[]>(ref dataBytes);
