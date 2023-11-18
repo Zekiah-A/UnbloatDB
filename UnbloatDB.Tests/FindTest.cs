@@ -18,8 +18,9 @@ internal sealed class FindTest
 
         await Db.CreateRecord(expected);
         
-        var results = await Db.FindRecords<Artist, Gender>("Gender", Gender.Male);
-
-        return results.Select(result => result.Data).Contains(expected);
+        var results = Db.FindRecords<Artist, Gender>("Gender", Gender.Male);
+        //var resultsA = results.GetAsyncEnumerator()
+        //return results.Select(record => record.Data).Contains(expected);
+        return false;
     }
 }

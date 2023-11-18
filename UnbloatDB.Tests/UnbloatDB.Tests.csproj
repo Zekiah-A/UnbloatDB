@@ -9,8 +9,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../UnbloatDB/UnbloatDB.csproj" />
-        <ProjectReference Include="..\UnbloatDB.Generators\UnbloatDB.Generators.csproj" 
-                          OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-        <ProjectReference Include="..\UnbloatDB.Shared\UnbloatDB.Shared.csproj" />
+        <ProjectReference Include="..\UnbloatDB.Generators\UnbloatDB.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

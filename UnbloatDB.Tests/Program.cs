@@ -6,8 +6,6 @@ partial class Program
 {
     static async Task Main(string[] args)
     {
-        HelloFrom("Generated Code");
-        
         // We test with each serialiser, in order to ensure each work equally.
         var databases = new List<Database>
         {
@@ -42,6 +40,4 @@ partial class Program
             Console.WriteLine("Result of Update test: " + await updateTest.RunTest());
         }
     }
-
-    static partial void HelloFrom(string name);
 }

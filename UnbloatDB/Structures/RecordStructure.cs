@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace UnbloatDB;
 
-public sealed record RecordStructure<T> where T : notnull
+public sealed partial record RecordStructure<T> where T : notnull
 {
     [JsonInclude]
     public string MasterKey { get; private set; }

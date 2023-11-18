@@ -4,11 +4,13 @@ public sealed class Database
 {
     private readonly Configuration configuration;
     private readonly SmartIndexer indexer;
-
+    private readonly ReferenceResolver ReferenceResolver;
+    
     public Database(Configuration config)
     {
         configuration = config;
         indexer = new SmartIndexer(config);
+        ReferenceResolver = new ReferenceResolver(this);
     }
 
     /// <summary>
@@ -66,7 +68,7 @@ public sealed class Database
     /// <param name="propertyName">Name of property in record that we are searching for.</param>
     /// <param name="value">Value of the property being searched for.</param>
     /// <typeparam name="TValue">The data type of the record we are searching for.</typeparam>
-    public async Task<RecordStructure<TGroup>[]> FindRecords<TGroup, TValue>(string propertyName, TValue value) where TGroup : notnull where TValue : notnull
+    public async IAsyncEnumerable<RecordStructure<TGroup>> FindRecords<TGroup, TValue>(string propertyName, TValue value) where TGroup : notnull where TValue : notnull
     {
         var group = typeof(TGroup).Name;
         var path = Path.Join(configuration.DataDirectory, group, configuration.IndexerDirectory, propertyName);
@@ -74,22 +76,19 @@ public sealed class Database
         var indexFile = indexer.Indexers.GetValueOrDefault(path) ?? indexer.OpenIndex(path, typeof(TValue));
 
         var values = indexFile.IndexValues.ToList(); // We have to copy it so we don't mutate the index (would be fatal)
-        var found = new List<RecordStructure<TGroup>>();
 
         var position = values.BinarySearch(value);
         while (position > 0)
         {
-            var record = await GetRecord<TGroup>(indexFile.IndexKeys[position]);
-            if (record is not null)
+            var recordStructure = await GetRecord<TGroup>(indexFile.IndexKeys[position]);
+            if (recordStructure is not null)
             {
-                found.Add(record);
+                yield return recordStructure;
                 values.RemoveAt(position);
             }
 
             position = values.BinarySearch(value);
         }
-
-        return found.ToArray(); 
     }
 
     public async Task<bool> UpdateRecord<T>(string masterKey, T data) where T: notnull
@@ -170,16 +169,15 @@ public sealed class Database
     /// </summary>
     /// <typeparam name="T">Record group we are retrieving all for.</typeparam>
     /// <returns>All records contained within the specified group.</returns>
-    public async Task<RecordStructure<T>[]> GetAllRecords<T>() where T : notnull
+    public async IAsyncEnumerable<RecordStructure<T>> GetAllRecords<T>() where T : notnull
     {
         var group = typeof(T).Name;
         var path = Path.Join(configuration.DataDirectory, group);
 
-        var found = new List<RecordStructure<T>>();
-        
+
         if (!Directory.Exists(path))
         {
-            return found.ToArray();
+            retur;
         }
 
         foreach (var recordPath in Directory.GetFiles(path))
